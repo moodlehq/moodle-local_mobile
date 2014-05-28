@@ -24,6 +24,20 @@
 
 defined('MOODLE_INTERNAL') || die;
 
+$functions = array(
+
+    // Cohort related functions.
+
+    'local_mobile_core_message_get_messages' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_message_get_messages',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Retrieve a list of messages send or received by a user (conversations, notifications or both)',
+        'type'          => 'read',
+        'capabilities'  => '',
+    )
+);
+
 $services = array(
    'Moodle Mobile extended service'  => array(
         'functions' => array (
@@ -36,7 +50,8 @@ $services = array(
             'moodle_user_get_users_by_courseid',
             'moodle_message_send_instantmessages',
             'core_course_get_contents',
-            'core_get_component_strings'),
+            'core_get_component_strings',
+            'local_mobile_core_message_get_messages'),
         'enabled' => 0,
         'restrictedusers' => 0,
         'shortname' => 'local_mobile',
