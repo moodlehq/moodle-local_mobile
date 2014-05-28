@@ -65,9 +65,9 @@ if (!$DB->record_exists('external_services', array('shortname' => $serviceshortn
 // Normal login using the app.
 $response->code  = 1;
 
-$config = get_config('local_mobile', 'typeoflogin');
-if (!empty($config->typeoflogin)) {
-    $response->code = $config->typeoflogin;
+$typeoflogin = get_config('local_mobile', 'typeoflogin');
+if (!empty($typeoflogin)) {
+    $response->code = $typeoflogin;
 }
 
 echo json_encode($response);

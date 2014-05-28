@@ -43,9 +43,9 @@ if (empty($service)) {
 }
 
 // Check if the plugin is properly configured.
-$config = get_config('local_mobile', 'typeoflogin');
+$typeoflogin = get_config('local_mobile', 'typeoflogin');
 
-if (empty($config->typeoflogin)) {
+if (empty($typeoflogin)) {
     throw new moodle_exception('pluginnotenabledorconfigured', 'local_mobile');
 }
 

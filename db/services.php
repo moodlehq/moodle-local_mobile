@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin settings
+ * External functions and service definitions.
  *
  * @package    local_mobile
  * @copyright  2014 Juan Leyva <juan@moodle.com>
@@ -24,17 +24,22 @@
 
 defined('MOODLE_INTERNAL') || die;
 
-if ($hassiteconfig) {
-
-    $settings = new admin_settingpage('local_mobile', new lang_string('pluginname', 'local_mobile'));
-    $ADMIN->add('localplugins', $settings);
-
-    $options = array(
-        1 => new lang_string('loginintheapp', 'local_mobile'),
-        2 => new lang_string('logininthebrowser', 'local_mobile')
-    );
-
-    $settings->add(new admin_setting_configselect('local_mobile/typeoflogin',
-                        get_string('local_mobiletypeoflogin_key', 'local_mobile'),
-                        get_string('local_mobiletypeoflogin', 'local_mobile'), 1, $options));
-}
+$services = array(
+   'Moodle Mobile extended service'  => array(
+        'functions' => array (
+            'moodle_enrol_get_users_courses',
+            'moodle_enrol_get_enrolled_users',
+            'moodle_user_get_users_by_id',
+            'moodle_webservice_get_siteinfo',
+            'moodle_notes_create_notes',
+            'moodle_user_get_course_participants_by_id',
+            'moodle_user_get_users_by_courseid',
+            'moodle_message_send_instantmessages',
+            'core_course_get_contents',
+            'core_get_component_strings'),
+        'enabled' => 0,
+        'restrictedusers' => 0,
+        'shortname' => 'local_mobile',
+        'downloadfiles' => 1
+    ),
+);
