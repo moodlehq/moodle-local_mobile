@@ -379,3 +379,47 @@ if (!function_exists("message_format_message_text")) {
     }
 
 }
+
+require_once($CFG->dirroot . "/calendar/lib.php");
+
+if (!function_exists("calendar_get_events_by_id")) {
+    /** Get calendar events by id
+     *
+     * @since Moodle 2.5
+     * @param array $eventids list of event ids
+     * @return array Array of event entries, empty array if nothing found
+     */
+
+    function calendar_get_events_by_id($eventids) {
+        global $DB;
+
+        if (!is_array($eventids) || empty($eventids)) {
+            return array();
+        }
+        list($wheresql, $params) = $DB->get_in_or_equal($eventids);
+        $wheresql = "id $wheresql";
+
+        return $DB->get_records_select('event', $wheresql, $params);
+    }
+}
+
+require_once($CFG->libdir . "/grouplib.php");
+
+if (!function_exists("groups_get_my_groups")) {
+    /**
+     * Gets array of all groups in current user.
+     *
+     * @since Moodle 2.5
+     * @category group
+     * @return array Returns an array of the group objects.
+     */
+    function groups_get_my_groups() {
+        global $DB, $USER;
+        return $DB->get_records_sql("SELECT *
+                                       FROM {groups_members} gm
+                                       JOIN {groups} g
+                                        ON g.id = gm.groupid
+                                      WHERE gm.userid = ?
+                                       ORDER BY name ASC", array($USER->id));
+    }
+}

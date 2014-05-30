@@ -35,6 +35,14 @@ $functions = array(
         'description'   => 'Retrieve a list of messages send or received by a user (conversations, notifications or both)',
         'type'          => 'read',
         'capabilities'  => '',
+    ),
+    'local_mobile_core_calendar_get_calendar_events' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_calendar_get_calendar_events',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Retrieve a list of calendar events',
+        'type'          => 'read',
+        'capabilities'  => '',
     )
 );
 
@@ -51,7 +59,8 @@ $services = array(
             'moodle_message_send_instantmessages',
             'core_course_get_contents',
             'core_get_component_strings',
-            'local_mobile_core_message_get_messages'),
+            'local_mobile_core_message_get_messages',
+            'local_mobile_core_calendar_get_calendar_events'),
         'enabled' => 0,
         'restrictedusers' => 0,
         'shortname' => 'local_mobile',
