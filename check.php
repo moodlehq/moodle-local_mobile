@@ -57,7 +57,14 @@ if (!$CFG->enablewebservices) {
 // Check if the service exists and is enabled.
 if (!$DB->record_exists('external_services', array('shortname' => $serviceshortname , 'enabled' => 1))) {
     $response->error = 1;
-    $response->code  = 3;
+
+    // There is not mobile services enabled.
+    if ($DB->record_exists('external_services', array('shortname' => MOODLE_OFFICIAL_MOBILE_SERVICE , 'enabled' => 1))) {
+        $response->code  = 3;
+    }
+    else {
+        $response->code  = 4;
+    }
     echo json_encode($response);
     die;
 }
