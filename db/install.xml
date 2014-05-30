@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/mobile/db" VERSION="20140530" COMMENT="XMLDB file for Moodle local/mobile"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="local_mobile_user_devices" COMMENT="Default comment for local_mobile, please edit me">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" NEXT="userid"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="id" NEXT="appid"/>
+        <FIELD NAME="appid" TYPE="char" LENGTH="128" NOTNULL="true" SEQUENCE="false" PREVIOUS="userid" NEXT="name"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="32" NOTNULL="true" SEQUENCE="false" PREVIOUS="appid" NEXT="model"/>
+        <FIELD NAME="model" TYPE="char" LENGTH="32" NOTNULL="true" SEQUENCE="false" PREVIOUS="name" NEXT="platform"/>
+        <FIELD NAME="platform" TYPE="char" LENGTH="32" NOTNULL="true" SEQUENCE="false" PREVIOUS="model" NEXT="version"/>
+        <FIELD NAME="version" TYPE="char" LENGTH="32" NOTNULL="true" SEQUENCE="false" PREVIOUS="platform" NEXT="pushid"/>
+        <FIELD NAME="pushid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" PREVIOUS="version" NEXT="uuid"/>
+        <FIELD NAME="uuid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" PREVIOUS="pushid" NEXT="timecreated"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" PREVIOUS="uuid" NEXT="timemodified"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" PREVIOUS="timecreated"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="pushid-userid"/>
+        <KEY NAME="pushid-userid" TYPE="unique" FIELDS="pushid, userid" PREVIOUS="primary" NEXT="userid"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" PREVIOUS="pushid-userid"/>
+      </KEYS>
+    </TABLE>
+  </TABLES>
+</XMLDB>

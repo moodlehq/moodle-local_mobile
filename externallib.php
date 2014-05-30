@@ -92,7 +92,7 @@ class local_mobile_external extends external_api {
         require_once($CFG->dirroot."/calendar/lib.php");
 
         // Parameter validation.
-        $params = self::validate_parameters(self::get_calendar_events_parameters(), array('events' => $events, 'options' => $options));
+        $params = self::validate_parameters(self::core_calendar_get_calendar_events_parameters(), array('events' => $events, 'options' => $options));
         $funcparam = array('courses' => array(), 'groups' => array());
         $hassystemcap = has_capability('moodle/calendar:manageentries', context_system::instance());
         $warnings = array();
@@ -161,7 +161,7 @@ class local_mobile_external extends external_api {
                 $events[$eventid] = $event;
             } else if (!empty($eventobj->modulename)) {
                 $cm = get_coursemodule_from_instance($eventobj->modulename, $eventobj->instance);
-                if (\core_availability\info_module::is_user_visible($cm, 0, false)) {
+                if (groups_course_module_visible($cm)) {
                     $events[$eventid] = $event;
                 }
             } else {
@@ -213,6 +213,96 @@ class local_mobile_external extends external_api {
                  ),
                  'warnings' => new external_warnings()
                 )
+        );
+    }
+
+    /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.6
+     */
+    public static function core_user_add_user_device_parameters() {
+        return new external_function_parameters(
+            array(
+                'appid'     => new external_value(PARAM_NOTAGS, 'the app id, usually something like com.moodle.moodlemobile'),
+                'name'      => new external_value(PARAM_NOTAGS, 'the device name, \'occam\' or \'iPhone\' etc.'),
+                'model'     => new external_value(PARAM_NOTAGS, 'the device model \'Nexus4\' or \'iPad1,1\' etc.'),
+                'platform'  => new external_value(PARAM_NOTAGS, 'the device platform \'iOS\' or \'Android\' etc.'),
+                'version'   => new external_value(PARAM_NOTAGS, 'the device version \'6.1.2\' or \'4.2.2\' etc.'),
+                'pushid'    => new external_value(PARAM_RAW, 'the device PUSH token/key/identifier/registration id'),
+                'uuid'      => new external_value(PARAM_RAW, 'the device UUID')
+            )
+        );
+    }
+
+    /**
+     * Add a user device in Moodle database (for PUSH notifications usually).
+     *
+     * @param string $appid The app id, usually something like com.moodle.moodlemobile.
+     * @param string $name The device name, occam or iPhone etc.
+     * @param string $model The device model Nexus4 or iPad1.1 etc.
+     * @param string $platform The device platform iOs or Android etc.
+     * @param string $version The device version 6.1.2 or 4.2.2 etc.
+     * @param string $pushid The device PUSH token/key/identifier/registration id.
+     * @param string $uuid The device UUID.
+     * @return array List of possible warnings.
+     * @since Moodle 2.6
+     */
+    public static function core_user_add_user_device($appid, $name, $model, $platform, $version, $pushid, $uuid) {
+        global $CFG, $USER, $DB;
+        require_once($CFG->dirroot . "/user/lib.php");
+
+        $params = self::validate_parameters(self::core_user_add_user_device_parameters(),
+                array('appid' => $appid,
+                      'name' => $name,
+                      'model' => $model,
+                      'platform' => $platform,
+                      'version' => $version,
+                      'pushid' => $pushid,
+                      'uuid' => $uuid
+                      ));
+
+        $warnings = array();
+
+        // Prevent duplicate keys for users.
+        if ($DB->get_record('local_mobile_user_devices', array('pushid' => $params['pushid'], 'userid' => $USER->id))) {
+            $warnings['warning'][] = array(
+                'item' => $params['pushid'],
+                'warningcode' => 'existingkeyforthisuser',
+                'message' => 'This key is already stored for this user'
+            );
+            return $warnings;
+        }
+
+        $userdevice = new stdclass;
+        $userdevice->userid     = $USER->id;
+        $userdevice->appid      = $params['appid'];
+        $userdevice->name       = $params['name'];
+        $userdevice->model      = $params['model'];
+        $userdevice->platform   = $params['platform'];
+        $userdevice->version    = $params['version'];
+        $userdevice->pushid     = $params['pushid'];
+        $userdevice->uuid       = $params['uuid'];
+        $userdevice->timecreated  = time();
+        $userdevice->timemodified = $userdevice->timecreated;
+
+        if (!$DB->insert_record('local_mobile_user_devices', $userdevice)) {
+            throw new moodle_exception("There was a problem saving in the database the device with key: " . $params['pushid']);
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_multiple_structure
+     * @since Moodle 2.6
+     */
+    public static function core_user_add_user_device_returns() {
+        return new external_multiple_structure(
+           new external_warnings()
         );
     }
 

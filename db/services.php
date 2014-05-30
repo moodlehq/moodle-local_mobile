@@ -28,6 +28,22 @@ $functions = array(
 
     // Cohort related functions.
 
+    'local_mobile_core_calendar_get_calendar_events' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_calendar_get_calendar_events',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Get calendar events',
+        'type'          => 'read',
+        'capabilities'  => 'moodle/calendar:manageentries', 'moodle/calendar:manageownentries', 'moodle/calendar:managegroupentries',
+    ),
+    'local_mobile_core_user_add_user_device' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_user_add_user_device',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Store mobile user devices information for Push Notifications.',
+        'type'          => 'write',
+        'capabilities'  => '',
+    ),
     'local_mobile_core_message_get_messages' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_message_get_messages',
@@ -35,15 +51,8 @@ $functions = array(
         'description'   => 'Retrieve a list of messages send or received by a user (conversations, notifications or both)',
         'type'          => 'read',
         'capabilities'  => '',
-    ),
-    'local_mobile_core_calendar_get_calendar_events' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'core_calendar_get_calendar_events',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Retrieve a list of calendar events',
-        'type'          => 'read',
-        'capabilities'  => '',
     )
+
 );
 
 $services = array(
@@ -60,7 +69,8 @@ $services = array(
             'core_course_get_contents',
             'core_get_component_strings',
             'local_mobile_core_message_get_messages',
-            'local_mobile_core_calendar_get_calendar_events'),
+            'local_mobile_core_calendar_get_calendar_events',
+            'local_mobile_core_user_add_user_device'),
         'enabled' => 0,
         'restrictedusers' => 0,
         'shortname' => 'local_mobile',
