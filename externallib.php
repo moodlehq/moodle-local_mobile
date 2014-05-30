@@ -339,6 +339,7 @@ class local_mobile_external extends external_api {
      */
     public static function core_grades_get_grades($courseid, $component = null, $activityid = null, $userids = array()) {
         global $CFG, $USER, $DB;
+        require_once($CFG->libdir . "/gradelib.php");
 
         $params = self::validate_parameters(self::core_grades_get_grades_parameters(),
             array('courseid' => $courseid, 'component' => $component, 'activityid' => $activityid, 'userids' => $userids));
@@ -395,6 +396,7 @@ class local_mobile_external extends external_api {
         if (!empty($cm)) {
             $cminstanceid = $cm->instance;
         }
+
         $grades = grade_get_grades($params['courseid'], $itemtype, $itemmodule, $cminstanceid, $params['userids']);
 
         $acitivityinstances = null;
@@ -431,13 +433,16 @@ class local_mobile_external extends external_api {
         $canviewhidden = has_capability('moodle/grade:viewhidden', context_course::instance($params['courseid']));
 
         $gradesarray['items'] = array();
+
         foreach ($grades->items as $gradeitem) {
             // Switch the stdClass instance for a grade item instance so we can call is_hidden() and use the ID.
             $gradeiteminstance = self::core_grades_get_grade_item(
-                $course->id, $gradeitem->itemtype, $gradeitem->itemmodule, $gradeitem->iteminstance, 0);
+                $course->id, $itemtype, $itemmodule, $cminstanceid, 0);
+
             if (!$canviewhidden && $gradeiteminstance->is_hidden()) {
                 continue;
             }
+
             $gradeitemarray = (array)$gradeitem;
             $gradeitemarray['grades'] = array();
 
@@ -521,6 +526,9 @@ class local_mobile_external extends external_api {
      * @return grade_item           A grade_item instance
      */
     private static function core_grades_get_grade_item($courseid, $itemtype, $itemmodule = null, $iteminstance = null, $itemnumber = null) {
+        global $CFG;
+        require_once($CFG->libdir . '/gradelib.php');
+
         $gradeiteminstance = null;
         if ($itemtype == 'course') {
             $gradeiteminstance = grade_item::fetch(array('courseid' => $courseid, 'itemtype' => $itemtype));
