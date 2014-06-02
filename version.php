@@ -24,8 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2014060300;            // The current plugin version (Date: YYYYMMDDXX)
-$plugin->requires  = 2013051400;            // Requires this Moodle version.
+$plugin->version   = 2014060400;            // The current plugin version (Date: YYYYMMDDXX)
+$plugin->requires  = 2014051200;            // Requires this Moodle version.
 $plugin->component = 'local_mobile';        // Full name of the plugin (used for diagnostics).
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '2.6.0';
+$plugin->release   = '2.7.0';

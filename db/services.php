@@ -28,30 +28,6 @@ $functions = array(
 
     // Cohort related functions.
 
-    'local_mobile_core_grades_get_grades' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'core_grades_get_grades',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Returns grade item details and optionally student grades.',
-        'type'          => 'read',
-        'capabilities'  => 'moodle/grade:view, moodle/grade:viewall',
-    ),
-    'local_mobile_mod_forum_get_forum_discussions' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'mod_forum_get_forum_discussions',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Returns a list of forum discussions contained within a given set of forums.',
-        'type'          => 'read',
-        'capabilities'  => 'mod/forum:viewdiscussion, mod/forum:viewqandawithoutposting',
-    ),
-    'local_mobile_mod_forum_get_forum_discussion_posts' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'mod_forum_get_forum_discussion_posts',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Returns a list of forum posts for a discussion.',
-        'type'          => 'read',
-        'capabilities'  => 'mod/forum:viewdiscussion, mod/forum:viewqandawithoutposting',
-    ),
     'local_mobile_core_message_get_messages' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_message_get_messages',
@@ -79,9 +55,9 @@ $services = array(
             'local_mobile_core_message_get_messages',
             'core_calendar_get_calendar_events',
             'core_user_add_user_device',
-            'local_mobile_core_grades_get_grades',
-            'local_mobile_mod_forum_get_forum_discussions',
-            'local_mobile_mod_forum_get_forum_discussion_posts',
+            'core_grades_get_grades',
+            'mod_forum_get_forum_discussions',
+            'mod_forum_get_forum_discussion_posts',
             'mod_forum_get_forums_by_courses'),
         'enabled' => 0,
         'restrictedusers' => 0,
