@@ -28,14 +28,6 @@ $functions = array(
 
     // Cohort related functions.
 
-    'local_mobile_core_calendar_get_calendar_events' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'core_calendar_get_calendar_events',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Get calendar events',
-        'type'          => 'read',
-        'capabilities'  => 'moodle/calendar:manageentries', 'moodle/calendar:manageownentries', 'moodle/calendar:managegroupentries',
-    ),
     'local_mobile_core_user_add_user_device' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_user_add_user_device',
@@ -93,11 +85,12 @@ $services = array(
             'core_course_get_contents',
             'core_get_component_strings',
             'local_mobile_core_message_get_messages',
-            'local_mobile_core_calendar_get_calendar_events',
+            'core_calendar_get_calendar_events',
             'local_mobile_core_user_add_user_device',
             'local_mobile_core_grades_get_grades',
             'local_mobile_mod_forum_get_forum_discussions',
-            'local_mobile_mod_forum_get_forum_discussion_posts'),
+            'local_mobile_mod_forum_get_forum_discussion_posts',
+            'mod_forum_get_forums_by_courses'),
         'enabled' => 0,
         'restrictedusers' => 0,
         'shortname' => 'local_mobile',
