@@ -28,14 +28,6 @@ $functions = array(
 
     // Cohort related functions.
 
-    'local_mobile_core_user_add_user_device' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'core_user_add_user_device',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Store mobile user devices information for Push Notifications.',
-        'type'          => 'write',
-        'capabilities'  => '',
-    ),
     'local_mobile_core_grades_get_grades' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_grades_get_grades',
@@ -86,7 +78,7 @@ $services = array(
             'core_get_component_strings',
             'local_mobile_core_message_get_messages',
             'core_calendar_get_calendar_events',
-            'local_mobile_core_user_add_user_device',
+            'core_user_add_user_device',
             'local_mobile_core_grades_get_grades',
             'local_mobile_mod_forum_get_forum_discussions',
             'local_mobile_mod_forum_get_forum_discussion_posts',
