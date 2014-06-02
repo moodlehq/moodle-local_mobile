@@ -25,7 +25,7 @@
 require_once(dirname(__FILE__) . '/../../config.php');
 
 $serviceshortname  = required_param('service',  PARAM_ALPHANUMEXT);
-$passport          = required_param('passport',  PARAM_ALPHANUM);    // Passport send from the app to validate the response URL.
+$passport          = required_param('passport',  PARAM_RAW);    // Passport send from the app to validate the response URL.
 
 // If the user is not logged, this will redirect him to the login page.
 // Once logged, it will be redirected again to this page and the app launched.
@@ -166,7 +166,7 @@ if (class_exists('\core\event\webservice_token_sent')) {
 // Passport is generated in the app, so the app opening can be validated using that variable.
 // Passports are valid only one time, it's deleted in the app once used.
 
-$siteid = md5($CFG->wwwroot + $passport);   // Passport is used here as salt.
+$siteid = md5($CFG->wwwroot . $passport);   // Passport is used here as salt.
 $apptoken = base64_encode($siteid . ':::' . $token->token);
 
 // Redirect using the custom URL scheme.
