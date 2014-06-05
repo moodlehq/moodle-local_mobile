@@ -145,7 +145,7 @@ if (count($tokens) > 0) {
             $event->trigger();
         }
     } else {
-        throw new moodle_exception('cannotcreatetoken', 'webservice', '', $serviceshortname);
+        throw new moodle_exception('cannotcreatetoken', 'local_mobile');
     }
 }
 
