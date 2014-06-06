@@ -94,7 +94,6 @@ $services = array(
         'enabled' => 0,
         'restrictedusers' => 0,
         'shortname' => 'local_mobile',
-        'downloadfiles' => 1,
-        'uploadfiles' => 1
+        'downloadfiles' => 1
     ),
 );
