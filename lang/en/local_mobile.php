@@ -24,7 +24,7 @@
 
 $string['cannotcreatetoken'] = 'Automatically token generation is not available to site administrators (they must create a token manually in the site)';
 $string['local_mobiledescription'] = 'Plugin that extends the Mobile service features';
-$string['pluginname'] = 'Moodle Mobile extended features';
+$string['pluginname'] = 'Moodle Mobile additional features';
 $string['pluginnotenabledorconfigured'] = 'The Moodle Mobile local plugin must be enabled and configured in order to launch the app';
 $string['local_mobilesettings'] = 'Settings';
 $string['local_mobiletypeoflogin'] = 'Choose the type of login';
