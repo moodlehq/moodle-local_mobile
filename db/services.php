@@ -80,7 +80,7 @@ $functions = array(
 );
 
 $services = array(
-   'Moodle Mobile extended service'  => array(
+   'Moodle Mobile additional features service'  => array(
         'functions' => array (
             'moodle_enrol_get_users_courses',
             'moodle_enrol_get_enrolled_users',
