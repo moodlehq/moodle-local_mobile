@@ -56,6 +56,8 @@ $services = array(
             'core_calendar_get_calendar_events',
             'core_user_add_user_device',
             'core_grades_get_grades',
+            'message_airnotifier_is_system_configured',
+            'message_airnotifier_are_notification_preferences_configured',
             'mod_forum_get_forum_discussions',
             'mod_forum_get_forum_discussion_posts',
             'mod_forum_get_forums_by_courses'),
