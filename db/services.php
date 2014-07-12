@@ -35,6 +35,15 @@ $functions = array(
         'description'   => 'Retrieve a list of messages send or received by a user (conversations, notifications or both)',
         'type'          => 'read',
         'capabilities'  => '',
+    ),
+
+    'local_mobile_core_grades_get_grades' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_grades_get_grades',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns grade item details and optionally student grades.',
+        'type'          => 'read',
+        'capabilities'  => 'moodle/grade:view, moodle/grade:viewall',
     )
 
 );
