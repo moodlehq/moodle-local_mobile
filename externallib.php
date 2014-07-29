@@ -437,7 +437,7 @@ class local_mobile_external extends external_api {
         foreach ($grades->items as $gradeitem) {
             // Switch the stdClass instance for a grade item instance so we can call is_hidden() and use the ID.
             $gradeiteminstance = self::core_grades_get_grade_item(
-                $course->id, $itemtype, $itemmodule, $cminstanceid, 0);
+                $course->id, $gradeitem->itemtype, $gradeitem->itemmodule, $gradeitem->iteminstance, $gradeitem->itemmodule);
 
             if (!$canviewhidden && $gradeiteminstance->is_hidden()) {
                 continue;
