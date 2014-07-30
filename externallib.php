@@ -339,7 +339,8 @@ class local_mobile_external extends external_api {
      */
     public static function core_grades_get_grades($courseid, $component = null, $activityid = null, $userids = array()) {
         global $CFG, $USER, $DB;
-        require_once($CFG->libdir . "/gradelib.php");
+        require_once($CFG->libdir  . "/gradelib.php");
+        require_once($CFG->dirroot . "/local/mobile/locallib.php");
 
         $params = self::validate_parameters(self::core_grades_get_grades_parameters(),
             array('courseid' => $courseid, 'component' => $component, 'activityid' => $activityid, 'userids' => $userids));
@@ -397,7 +398,7 @@ class local_mobile_external extends external_api {
             $cminstanceid = $cm->instance;
         }
 
-        $grades = grade_get_grades($params['courseid'], $itemtype, $itemmodule, $cminstanceid, $params['userids']);
+        $grades = local_mobile_grade_get_grades($params['courseid'], $itemtype, $itemmodule, $cminstanceid, $params['userids']);
 
         $acitivityinstances = null;
         if (empty($cm)) {
