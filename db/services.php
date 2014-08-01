@@ -44,8 +44,17 @@ $functions = array(
         'description'   => 'Returns grade item details and optionally student grades.',
         'type'          => 'read',
         'capabilities'  => 'moodle/grade:view, moodle/grade:viewall',
-    )
+    ),
 
+    'local_mobile_core_files_get_files' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_files_get_files',
+        'description'   => 'browse moodle files',
+        'type'          => 'read',
+        'classpath'     => 'local/mobile/externallib.php',
+        'type'          => 'read',
+        'capabilities'  => '',
+    )
 );
 
 $services = array(
@@ -69,7 +78,7 @@ $services = array(
             'message_airnotifier_are_notification_preferences_configured',
             'mod_forum_get_forum_discussions',
             'mod_forum_get_forum_discussion_posts',
-            'mod_forum_get_forums_by_courses'),
+            'local_mobile_core_files_get_files'),
         'enabled' => 0,
         'restrictedusers' => 0,
         'shortname' => 'local_mobile',
