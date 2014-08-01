@@ -1076,4 +1076,185 @@ class local_mobile_external extends external_api {
         );
     }
 
+    /**
+     * Returns description of get_files parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.2
+     */
+    public static function core_files_get_files_parameters() {
+        return new external_function_parameters(
+            array(
+                'contextid'    => new external_value(PARAM_INT, 'context id Set to -1 to use contextlevel and instanceid.'),
+                'component'    => new external_value(PARAM_TEXT, 'component'),
+                'filearea'     => new external_value(PARAM_TEXT, 'file area'),
+                'itemid'       => new external_value(PARAM_INT, 'associated id'),
+                'filepath'     => new external_value(PARAM_PATH, 'file path'),
+                'filename'     => new external_value(PARAM_TEXT, 'file name'),
+                'modified'     => new external_value(PARAM_INT, 'timestamp to return files changed after this time.', VALUE_DEFAULT, null),
+                'contextlevel' => new external_value(PARAM_ALPHA, 'The context level for the file location.', VALUE_DEFAULT, null),
+                'instanceid'   => new external_value(PARAM_INT, 'The instance id for where the file is located.', VALUE_DEFAULT, null)
+
+            )
+        );
+    }
+
+    /**
+     * Return moodle files listing
+     *
+     * @param int $contextid context id
+     * @param int $component component
+     * @param int $filearea file area
+     * @param int $itemid item id
+     * @param string $filepath file path
+     * @param string $filename file name
+     * @param int $modified timestamp to return files changed after this time.
+     * @param string $contextlevel The context level for the file location.
+     * @param int $instanceid The instance id for where the file is located.
+     * @return array
+     * @since Moodle 2.2
+     */
+    public static function core_files_get_files($contextid, $component, $filearea, $itemid, $filepath, $filename, $modified = null,
+                                     $contextlevel = null, $instanceid = null) {
+        global $CFG;
+        require_once($CFG->dirroot . "/local/mobile/locallib.php");
+
+        $parameters = array(
+            'contextid'    => $contextid,
+            'component'    => $component,
+            'filearea'     => $filearea,
+            'itemid'       => $itemid,
+            'filepath'     => $filepath,
+            'filename'     => $filename,
+            'modified'     => $modified,
+            'contextlevel' => $contextlevel,
+            'instanceid'   => $instanceid);
+        $fileinfo = self::validate_parameters(self::core_files_get_files_parameters(), $parameters);
+
+        $browser = get_file_browser();
+
+        // We need to preserve backwards compatibility. Zero will use the system context and minus one will
+        // use the addtional parameters to determine the context.
+        // TODO MDL-40489 get_context_from_params should handle this logic.
+        if ($fileinfo['contextid'] == 0) {
+            $context = context_system::instance();
+        } else {
+            if ($fileinfo['contextid'] == -1) {
+                unset($fileinfo['contextid']);
+            }
+            $context = local_mobile_get_context_from_params($fileinfo);
+        }
+        self::validate_context($context);
+
+        if (empty($fileinfo['component'])) {
+            $fileinfo['component'] = null;
+        }
+        if (empty($fileinfo['filearea'])) {
+            $fileinfo['filearea'] = null;
+        }
+        if (empty($fileinfo['filename'])) {
+            $fileinfo['filename'] = null;
+        }
+        if (empty($fileinfo['filepath'])) {
+            $fileinfo['filepath'] = null;
+        }
+
+        $return = array();
+        $return['parents'] = array();
+        $return['files'] = array();
+        $list = array();
+
+        if ($file = $browser->get_file_info(
+            $context, $fileinfo['component'], $fileinfo['filearea'], $fileinfo['itemid'],
+                $fileinfo['filepath'], $fileinfo['filename'])) {
+            $level = $file->get_parent();
+            while ($level) {
+                $params = $level->get_params();
+                $params['filename'] = $level->get_visible_name();
+                array_unshift($return['parents'], $params);
+                $level = $level->get_parent();
+            }
+            $children = $file->get_children();
+            foreach ($children as $child) {
+
+                $params = $child->get_params();
+                $timemodified = $child->get_timemodified();
+
+                if ($child->is_directory()) {
+                    if ((is_null($modified)) or ($modified < $timemodified)) {
+                        $node = array(
+                            'contextid' => $params['contextid'],
+                            'component' => $params['component'],
+                            'filearea'  => $params['filearea'],
+                            'itemid'    => $params['itemid'],
+                            'filepath'  => $params['filepath'],
+                            'filename'  => $child->get_visible_name(),
+                            'url'       => null,
+                            'isdir'     => true,
+                            'timemodified' => $timemodified
+                           );
+                           $list[] = $node;
+                    }
+                } else {
+                    if ((is_null($modified)) or ($modified < $timemodified)) {
+                        $node = array(
+                            'contextid' => $params['contextid'],
+                            'component' => $params['component'],
+                            'filearea'  => $params['filearea'],
+                            'itemid'    => $params['itemid'],
+                            'filepath'  => $params['filepath'],
+                            'filename'  => $child->get_visible_name(),
+                            'url'       => $child->get_url(),
+                            'isdir'     => false,
+                            'timemodified' => $timemodified
+                        );
+                           $list[] = $node;
+                    }
+                }
+            }
+        }
+        $return['files'] = $list;
+        return $return;
+    }
+
+    /**
+     * Returns description of get_files returns
+     *
+     * @return external_single_structure
+     * @since Moodle 2.2
+     */
+    public static function core_files_get_files_returns() {
+        return new external_single_structure(
+            array(
+                'parents' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'contextid' => new external_value(PARAM_INT, ''),
+                            'component' => new external_value(PARAM_COMPONENT, ''),
+                            'filearea'  => new external_value(PARAM_AREA, ''),
+                            'itemid'    => new external_value(PARAM_INT, ''),
+                            'filepath'  => new external_value(PARAM_TEXT, ''),
+                            'filename'  => new external_value(PARAM_TEXT, ''),
+                        )
+                    )
+                ),
+                'files' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'contextid' => new external_value(PARAM_INT, ''),
+                            'component' => new external_value(PARAM_COMPONENT, ''),
+                            'filearea'  => new external_value(PARAM_AREA, ''),
+                            'itemid'   => new external_value(PARAM_INT, ''),
+                            'filepath' => new external_value(PARAM_TEXT, ''),
+                            'filename' => new external_value(PARAM_TEXT, ''),
+                            'isdir'    => new external_value(PARAM_BOOL, ''),
+                            'url'      => new external_value(PARAM_TEXT, ''),
+                            'timemodified' => new external_value(PARAM_INT, ''),
+                        )
+                    )
+                )
+            )
+        );
+    }
+
 }

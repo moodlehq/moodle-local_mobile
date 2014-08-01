@@ -67,7 +67,16 @@ $functions = array(
         'description'   => 'Retrieve a list of messages send or received by a user (conversations, notifications or both)',
         'type'          => 'read',
         'capabilities'  => '',
-    )
+    ),
+    'local_mobile_core_files_get_files' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_files_get_files',
+        'description'   => 'browse moodle files',
+        'type'          => 'read',
+        'classpath'     => 'local/mobile/externallib.php',
+        'type'          => 'read',
+        'capabilities'  => '',
+    ),
 
 );
 
@@ -90,7 +99,7 @@ $services = array(
             'local_mobile_core_grades_get_grades',
             'local_mobile_mod_forum_get_forum_discussions',
             'local_mobile_mod_forum_get_forum_discussion_posts',
-            'mod_forum_get_forums_by_courses'),
+            'local_mobile_core_files_get_files'),
         'enabled' => 0,
         'restrictedusers' => 0,
         'shortname' => 'local_mobile',
