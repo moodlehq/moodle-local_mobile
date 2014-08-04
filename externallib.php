@@ -298,11 +298,11 @@ class local_mobile_external extends external_api {
                                         'grade' => new external_value(
                                             PARAM_FLOAT, 'Student grade'),
                                         'locked' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade locked?'),
+                                            PARAM_INT, '0 means not locked, timestamp means locked until that date'),
                                         'hidden' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade hidden?'),
+                                            PARAM_INT, '0 means not hidden, 1 hidden, timestamp hidden until that date'),
                                         'overridden' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade overridden?'),
+                                            PARAM_INT, '0 means not overridden, timestamp means overriden until that date'),
                                         'feedback' => new external_value(
                                             PARAM_RAW, 'Feedback from the grader'),
                                         'feedbackformat' => new external_value(
