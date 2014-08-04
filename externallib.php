@@ -166,6 +166,10 @@ class local_mobile_external extends external_api {
                 continue;
             }
 
+            // Format mixed bool/integer parameters.
+            $gradeitem->hidden = (!$gradeitem->hidden)? 0 : $gradeitem->hidden;
+            $gradeitem->locked = (!$gradeitem->locked)? 0 : $gradeitem->locked;
+
             $gradeitemarray = (array)$gradeitem;
             $gradeitemarray['grades'] = array();
 
@@ -184,6 +188,11 @@ class local_mobile_external extends external_api {
                             continue;
                         }
                     }
+
+                    // Format mixed bool/integer parameters.
+                    $studentgrade->hidden = (!$studentgrade->hidden)? 0 : $studentgrade->hidden;
+                    $studentgrade->locked = (!$studentgrade->locked)? 0 : $studentgrade->locked;
+                    $studentgrade->overridden = (!$studentgrade->overridden)? "" : $studentgrade->overridden;
 
                     $gradeitemarray['grades'][$studentid] = (array)$studentgrade;
                     // Add the student ID as some WS clients can't access the array key.
@@ -212,6 +221,11 @@ class local_mobile_external extends external_api {
             if (empty($modulecm)) {
                 $modulecm = $acitivityinstances[$outcome->itemmodule][$outcome->iteminstance];
             }
+
+            // Format mixed bool/integer parameters.
+            $outcome->hidden = (!$outcome->hidden)? 0 : $outcome->hidden;
+            $outcome->locked = (!$outcome->locked)? 0 : $outcome->locked;
+
             $gradesarray['outcomes'][$modulecm->id] = (array)$outcome;
             $gradesarray['outcomes'][$modulecm->id]['activityid'] = $modulecm->id;
 
@@ -233,6 +247,11 @@ class local_mobile_external extends external_api {
                             continue;
                         }
                     }
+
+                    // Format mixed bool/integer parameters.
+                    $studentgrade->hidden = (!$studentgrade->hidden)? 0 : $studentgrade->hidden;
+                    $studentgrade->locked = (!$studentgrade->locked)? 0 : $studentgrade->locked;
+
                     $gradesarray['outcomes'][$modulecm->id]['grades'][$studentid] = (array)$studentgrade;
 
                     // Add the student ID into the grade structure as some WS clients can't access the key.
@@ -288,8 +307,8 @@ class local_mobile_external extends external_api {
                             'grademin' => new external_value(PARAM_FLOAT, 'Minimum grade'),
                             'grademax' => new external_value(PARAM_FLOAT, 'Maximum grade'),
                             'gradepass' => new external_value(PARAM_FLOAT, 'The passing grade threshold'),
-                            'locked' => new external_value(PARAM_BOOL, 'Is the grade item locked?'),
-                            'hidden' => new external_value(PARAM_BOOL, 'Is the grade item hidden?'),
+                            'locked' => new external_value(PARAM_INT, '0 means not locked, > 1 is a date to lock until'),
+                            'hidden' => new external_value(PARAM_INT, '0 means not hidden, > 1 is a date to hide until'),
                             'grades' => new external_multiple_structure(
                                 new external_single_structure(
                                     array(
@@ -298,11 +317,11 @@ class local_mobile_external extends external_api {
                                         'grade' => new external_value(
                                             PARAM_FLOAT, 'Student grade'),
                                         'locked' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade locked?'),
+                                            PARAM_INT, '0 means not locked, > 1 is a date to lock until'),
                                         'hidden' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade hidden?'),
+                                            PARAM_INT, '0 means not hidden, 1 hidden, > 1 is a date to hide until'),
                                         'overridden' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade overridden?'),
+                                            PARAM_INT, '0 means not overridden, > 1 means overridden'),
                                         'feedback' => new external_value(
                                             PARAM_RAW, 'Feedback from the grader'),
                                         'feedbackformat' => new external_value(
@@ -333,8 +352,8 @@ class local_mobile_external extends external_api {
                             'itemnumber'  => new external_value(PARAM_INT, 'Will be 0 unless the module has multiple grades'),
                             'scaleid' => new external_value(PARAM_INT, 'The ID of the custom scale or 0'),
                             'name' => new external_value(PARAM_RAW, 'The module name'),
-                            'locked' => new external_value(PARAM_BOOL, 'Is the grade item locked?'),
-                            'hidden' => new external_value(PARAM_BOOL, 'Is the grade item hidden?'),
+                            'locked' => new external_value(PARAM_INT, '0 means not locked, > 1 is a date to lock until'),
+                            'hidden' => new external_value(PARAM_INT, '0 means not hidden, > 1 is a date to hide until'),
                             'grades' => new external_multiple_structure(
                                 new external_single_structure(
                                     array(
@@ -343,9 +362,9 @@ class local_mobile_external extends external_api {
                                         'grade' => new external_value(
                                             PARAM_FLOAT, 'Student grade'),
                                         'locked' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade locked?'),
+                                            PARAM_INT, '0 means not locked, > 1 is a date to lock until'),
                                         'hidden' => new external_value(
-                                            PARAM_BOOL, 'Is the student\'s grade hidden?'),
+                                            PARAM_INT, '0 means not hidden, 1 hidden, > 1 is a date to hide until'),
                                         'feedback' => new external_value(
                                             PARAM_RAW, 'Feedback from the grader'),
                                         'feedbackformat' => new external_value(
@@ -364,7 +383,6 @@ class local_mobile_external extends external_api {
                 )
             )
         );
-
     }
 
     /**
