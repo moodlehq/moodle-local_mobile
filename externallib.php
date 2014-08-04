@@ -284,7 +284,7 @@ class local_mobile_external extends external_api {
                     // Format mixed bool/integer parameters.
                     $studentgrade->hidden = (!$studentgrade->hidden)? 0 : $studentgrade->hidden;
                     $studentgrade->locked = (!$studentgrade->locked)? 0 : $studentgrade->locked;
-                    $studentgrade->overridden = (!$studentgrade->overridden)? "" : $studentgrade->overridden;
+                    $studentgrade->overridden = (!$studentgrade->overridden)? 0 : $studentgrade->overridden;
 
                     $gradeitemarray['grades'][$studentid] = (array)$studentgrade;
                     // Add the student ID as some WS clients can't access the array key.
