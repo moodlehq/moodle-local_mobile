@@ -166,6 +166,10 @@ class local_mobile_external extends external_api {
                 continue;
             }
 
+            // Format mixed bool/integer parameters.
+            $gradeitem->hidden = (!$gradeitem->hidden)? 0 : $gradeitem->hidden;
+            $gradeitem->locked = (!$gradeitem->locked)? 0 : $gradeitem->locked;
+
             $gradeitemarray = (array)$gradeitem;
             $gradeitemarray['grades'] = array();
 
@@ -186,8 +190,8 @@ class local_mobile_external extends external_api {
                     }
 
                     // Format mixed bool/integer parameters.
-                    $studentgrade->hidden = (!$studentgrade->hidden)? "" : $studentgrade->hidden;
-                    $studentgrade->locked = (!$studentgrade->locked)? "" : $studentgrade->locked;
+                    $studentgrade->hidden = (!$studentgrade->hidden)? 0 : $studentgrade->hidden;
+                    $studentgrade->locked = (!$studentgrade->locked)? 0 : $studentgrade->locked;
                     $studentgrade->overridden = (!$studentgrade->overridden)? "" : $studentgrade->overridden;
 
                     $gradeitemarray['grades'][$studentid] = (array)$studentgrade;
@@ -217,6 +221,11 @@ class local_mobile_external extends external_api {
             if (empty($modulecm)) {
                 $modulecm = $acitivityinstances[$outcome->itemmodule][$outcome->iteminstance];
             }
+
+            // Format mixed bool/integer parameters.
+            $outcome->hidden = (!$outcome->hidden)? 0 : $outcome->hidden;
+            $outcome->locked = (!$outcome->locked)? 0 : $outcome->locked;
+
             $gradesarray['outcomes'][$modulecm->id] = (array)$outcome;
             $gradesarray['outcomes'][$modulecm->id]['activityid'] = $modulecm->id;
 
@@ -240,8 +249,8 @@ class local_mobile_external extends external_api {
                     }
 
                     // Format mixed bool/integer parameters.
-                    $studentgrade->hidden = (!$studentgrade->hidden)? "" : $studentgrade->hidden;
-                    $studentgrade->locked = (!$studentgrade->locked)? "" : $studentgrade->locked;
+                    $studentgrade->hidden = (!$studentgrade->hidden)? 0 : $studentgrade->hidden;
+                    $studentgrade->locked = (!$studentgrade->locked)? 0 : $studentgrade->locked;
 
                     $gradesarray['outcomes'][$modulecm->id]['grades'][$studentid] = (array)$studentgrade;
 
