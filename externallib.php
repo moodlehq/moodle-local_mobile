@@ -986,6 +986,24 @@ class local_mobile_external extends external_api {
             $user = username_load_fields_from_object($user, $post);
             $posts[$pid]->userfullname = fullname($user, $canviewfullname);
 
+            // List attachments.
+            if (!empty($post->attachment)) {
+                $attachments = array();
+
+                $fs = get_file_storage();
+                if ($files = $fs->get_area_files($modcontext->id, 'mod_forum', 'attachment', $post->id, "filename", false)) {
+                    foreach ($files as $file) {
+                        $attachments[] = array(
+                            'filename' => $file->get_filename(),
+                            'mimetype' => $file->get_mimetype(),
+                            'fileurl'  => file_encode_url($CFG->wwwroot.'/webservice/pluginfile.php',
+                                            '/'.$modcontext->id.'/mod_forum/attachment/'.$post->id.'/'.$filename)
+                        );
+                    }
+                    $post->attachments = $attachments;
+                }
+            }
+
             $posts[$pid] = (array) $post;
         }
 
@@ -1019,6 +1037,15 @@ class local_mobile_external extends external_api {
                                 'messageformat' => new external_value(PARAM_INT, 'The post message format'),
                                 'messagetrust' => new external_value(PARAM_INT, 'Can we trust?'),
                                 'attachment' => new external_value(PARAM_RAW, 'Attachments'),
+                                'attachments' => new external_multiple_structure(
+                                    new external_single_structure(
+                                        array (
+                                            'filename' => new external_value (PARAM_RAW, 'file name'),
+                                            'mimetype' => new external_value (PARAM_RAW, 'mime type'),
+                                            'fileurl'  => new external_value (PARAM_URL, 'file download url')
+                                        )
+                                    ), 'attachments', VALUE_OPTIONAL
+                                ),
                                 'totalscore' => new external_value(PARAM_INT, 'The post message total score'),
                                 'mailnow' => new external_value(PARAM_INT, 'Mail now?'),
                                 'children' => new external_multiple_structure(new external_value(PARAM_INT, 'children post id')),
