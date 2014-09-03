@@ -396,8 +396,8 @@ class local_mobile_external extends external_api {
             array(
                 'forumids' => new external_multiple_structure(new external_value(PARAM_INT, 'forum ID',
                         '', VALUE_REQUIRED, '', NULL_NOT_ALLOWED), 'Array of Forum IDs', VALUE_REQUIRED),
-                'limitfrom' => new external_value(PARAM_INT, 'limit from', VALUE_OPTIONAL, 0),
-                'limitnum' => new external_value(PARAM_INT, 'limit number', VALUE_OPTIONAL, 0)
+                'limitfrom' => new external_value(PARAM_INT, 'limit from', VALUE_DEFAULT, 0),
+                'limitnum' => new external_value(PARAM_INT, 'limit number', VALUE_DEFAULT, 0)
             )
         );
     }
