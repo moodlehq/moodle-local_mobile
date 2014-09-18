@@ -76,6 +76,7 @@ $services = array(
             'local_mobile_core_grades_get_grades',
             'message_airnotifier_is_system_configured',
             'message_airnotifier_are_notification_preferences_configured',
+            'mod_forum_get_forums_by_courses',
             'mod_forum_get_forum_discussions',
             'mod_forum_get_forum_discussion_posts',
             'local_mobile_core_files_get_files'),
