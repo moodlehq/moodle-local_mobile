@@ -438,7 +438,7 @@ class local_mobile_external extends external_api {
         foreach ($grades->items as $gradeitem) {
             // Switch the stdClass instance for a grade item instance so we can call is_hidden() and use the ID.
             $gradeiteminstance = self::core_grades_get_grade_item(
-                $course->id, $gradeitem->itemtype, $gradeitem->itemmodule, $gradeitem->iteminstance, $gradeitem->itemmodule);
+                $course->id, $gradeitem->itemtype, $gradeitem->itemmodule, $gradeitem->iteminstance, $gradeitem->itemnumber);
 
             if (!$canviewhidden && $gradeiteminstance->is_hidden()) {
                 continue;
@@ -615,7 +615,7 @@ class local_mobile_external extends external_api {
                                         'str_long_grade' => new external_value(
                                             PARAM_RAW, 'A nicely formatted string representation of the grade'),
                                         'str_feedback' => new external_value(
-                                            PARAM_RAW, 'A string representation of the feedback from the grader'),
+                                            PARAM_RAW, 'A formatted string representation of the feedback from the grader'),
                                     )
                                 )
                             ),
@@ -652,7 +652,7 @@ class local_mobile_external extends external_api {
                                         'str_grade' => new external_value(
                                             PARAM_RAW, 'A string representation of the grade'),
                                         'str_feedback' => new external_value(
-                                            PARAM_TEXT, 'A string representation of the feedback from the grader'),
+                                            PARAM_RAW, 'A formatted string representation of the feedback from the grader'),
                                     )
                                 )
                             ),
@@ -1488,6 +1488,127 @@ class local_mobile_external extends external_api {
                         )
                     )
                 )
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_forum.
+     *
+     * @return external_external_function_parameters
+     * @since Moodle 2.5
+     */
+    public static function mod_forum_get_forums_by_courses_parameters() {
+        return new external_function_parameters (
+            array(
+                'courseids' => new external_multiple_structure(new external_value(PARAM_INT, 'course ID',
+                        '', VALUE_REQUIRED, '', NULL_NOT_ALLOWED), 'Array of Course IDs', VALUE_DEFAULT, array()),
+            )
+        );
+    }
+
+    /**
+     * Returns a list of forums in a provided list of courses,
+     * if no list is provided all forums that the user can view
+     * will be returned.
+     *
+     * @param array $courseids the course ids
+     * @return array the forum details
+     * @since Moodle 2.5
+     */
+    public static function mod_forum_get_forums_by_courses($courseids = array()) {
+        global $CFG, $DB, $USER;
+
+        require_once($CFG->dirroot . "/mod/forum/lib.php");
+
+        $params = self::validate_parameters(self::mod_forum_get_forums_by_courses_parameters(), array('courseids' => $courseids));
+
+        if (empty($params['courseids'])) {
+            // Get all the courses the user can view.
+            $courseids = array_keys(enrol_get_my_courses());
+        } else {
+            $courseids = $params['courseids'];
+        }
+
+        // Array to store the forums to return.
+        $arrforums = array();
+
+        // Ensure there are courseids to loop through.
+        if (!empty($courseids)) {
+            // Go through the courseids and return the forums.
+            foreach ($courseids as $cid) {
+                // Get the course context.
+                $context = context_course::instance($cid);
+                // Check the user can function in this context.
+                self::validate_context($context);
+                // Get the forums in this course.
+                if ($forums = $DB->get_records('forum', array('course' => $cid))) {
+                    // Get the modinfo for the course.
+                    $modinfo = get_fast_modinfo($cid);
+                    // Get the forum instances.
+                    $foruminstances = $modinfo->get_instances_of('forum');
+                    // Loop through the forums returned by modinfo.
+                    foreach ($foruminstances as $forumid => $cm) {
+                        // If it is not visible or present in the forums get_records call, continue.
+                        if (!$cm->uservisible || !isset($forums[$forumid])) {
+                            continue;
+                        }
+                        // Set the forum object.
+                        $forum = $forums[$forumid];
+                        // Get the module context.
+                        $context = context_module::instance($cm->id);
+                        // Check they have the view forum capability.
+                        require_capability('mod/forum:viewdiscussion', $context);
+                        // Format the intro before being returning using the format setting.
+                        list($forum->intro, $forum->introformat) = external_format_text($forum->intro, $forum->introformat,
+                            $context->id, 'mod_forum', 'intro', 0);
+                        // Add the course module id to the object, this information is useful.
+                        $forum->cmid = $cm->id;
+                        // Add the forum to the array to return.
+                        $arrforums[$forum->id] = (array) $forum;
+                    }
+                }
+            }
+        }
+
+        return $arrforums;
+    }
+
+    /**
+     * Describes the get_forum return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 2.5
+     */
+     public static function mod_forum_get_forums_by_courses_returns() {
+        return new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'id' => new external_value(PARAM_INT, 'Forum id'),
+                    'course' => new external_value(PARAM_TEXT, 'Course id'),
+                    'type' => new external_value(PARAM_TEXT, 'The forum type'),
+                    'name' => new external_value(PARAM_TEXT, 'Forum name'),
+                    'intro' => new external_value(PARAM_RAW, 'The forum intro'),
+                    'introformat' => new external_format_value('intro'),
+                    'assessed' => new external_value(PARAM_INT, 'Aggregate type'),
+                    'assesstimestart' => new external_value(PARAM_INT, 'Assess start time'),
+                    'assesstimefinish' => new external_value(PARAM_INT, 'Assess finish time'),
+                    'scale' => new external_value(PARAM_INT, 'Scale'),
+                    'maxbytes' => new external_value(PARAM_INT, 'Maximum attachment size'),
+                    'maxattachments' => new external_value(PARAM_INT, 'Maximum number of attachments'),
+                    'forcesubscribe' => new external_value(PARAM_INT, 'Force users to subscribe'),
+                    'trackingtype' => new external_value(PARAM_INT, 'Subscription mode'),
+                    'rsstype' => new external_value(PARAM_INT, 'RSS feed for this activity'),
+                    'rssarticles' => new external_value(PARAM_INT, 'Number of RSS recent articles'),
+                    'timemodified' => new external_value(PARAM_INT, 'Time modified'),
+                    'warnafter' => new external_value(PARAM_INT, 'Post threshold for warning'),
+                    'blockafter' => new external_value(PARAM_INT, 'Post threshold for blocking'),
+                    'blockperiod' => new external_value(PARAM_INT, 'Time period for blocking'),
+                    'completiondiscussions' => new external_value(PARAM_INT, 'Student must create discussions'),
+                    'completionreplies' => new external_value(PARAM_INT, 'Student must post replies'),
+                    'completionposts' => new external_value(PARAM_INT, 'Student must post discussions or replies'),
+                    'cmid' => new external_value(PARAM_INT, 'Course module id')
+                ), 'forum'
             )
         );
     }
