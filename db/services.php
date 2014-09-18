@@ -89,6 +89,7 @@ $services = array(
             'core_calendar_get_calendar_events',
             'core_user_add_user_device',
             'local_mobile_core_grades_get_grades',
+            'mod_forum_get_forums_by_courses',
             'local_mobile_mod_forum_get_forum_discussions',
             'local_mobile_mod_forum_get_forum_discussion_posts',
             'local_mobile_core_files_get_files'),
