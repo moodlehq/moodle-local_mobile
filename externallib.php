@@ -1013,21 +1013,26 @@ class local_mobile_external extends external_api {
             $user = username_load_fields_from_object($user, $post);
             $posts[$pid]->userfullname = fullname($user, $canviewfullname);
 
+            // Rewrite embedded images URLs.
+            list($post->message, $post->messageformat) =
+                external_format_text($post->message, $post->messageformat, $modcontext->id, 'mod_forum', 'post', $post->id);
+
             // List attachments.
             if (!empty($post->attachment)) {
-                $attachments = array();
+                $post->attachments = array();
 
                 $fs = get_file_storage();
                 if ($files = $fs->get_area_files($modcontext->id, 'mod_forum', 'attachment', $post->id, "filename", false)) {
                     foreach ($files as $file) {
-                        $attachments[] = array(
-                            'filename' => $file->get_filename(),
+                        $filename = $file->get_filename();
+
+                        $post->attachments[] = array(
+                            'filename' => $filename,
                             'mimetype' => $file->get_mimetype(),
                             'fileurl'  => file_encode_url($CFG->wwwroot.'/webservice/pluginfile.php',
                                             '/'.$modcontext->id.'/mod_forum/attachment/'.$post->id.'/'.$filename)
                         );
                     }
-                    $post->attachments = $attachments;
                 }
             }
 
@@ -1061,15 +1066,15 @@ class local_mobile_external extends external_api {
                                 'mailed' => new external_value(PARAM_INT, 'Mailed?'),
                                 'subject' => new external_value(PARAM_TEXT, 'The post subject'),
                                 'message' => new external_value(PARAM_RAW, 'The post message'),
-                                'messageformat' => new external_value(PARAM_INT, 'The post message format'),
+                                'messageformat' => new external_format_value('message'),
                                 'messagetrust' => new external_value(PARAM_INT, 'Can we trust?'),
-                                'attachment' => new external_value(PARAM_RAW, 'Attachments'),
+                                'attachment' => new external_value(PARAM_RAW, 'Has attachments?'),
                                 'attachments' => new external_multiple_structure(
                                     new external_single_structure(
                                         array (
-                                            'filename' => new external_value (PARAM_RAW, 'file name'),
-                                            'mimetype' => new external_value (PARAM_RAW, 'mime type'),
-                                            'fileurl'  => new external_value (PARAM_URL, 'file download url')
+                                            'filename' => new external_value(PARAM_FILE, 'file name'),
+                                            'mimetype' => new external_value(PARAM_RAW, 'mime type'),
+                                            'fileurl'  => new external_value(PARAM_URL, 'file download url')
                                         )
                                     ), 'attachments', VALUE_OPTIONAL
                                 ),
