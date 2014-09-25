@@ -36,7 +36,6 @@ $functions = array(
         'type'          => 'read',
         'capabilities'  => '',
     ),
-
     'local_mobile_core_grades_get_grades' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_grades_get_grades',
@@ -45,7 +44,6 @@ $functions = array(
         'type'          => 'read',
         'capabilities'  => 'moodle/grade:view, moodle/grade:viewall',
     ),
-
     'local_mobile_core_files_get_files' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_files_get_files',
@@ -54,7 +52,33 @@ $functions = array(
         'classpath'     => 'local/mobile/externallib.php',
         'type'          => 'read',
         'capabilities'  => '',
-    )
+    ),
+    'local_mobile_mod_forum_get_forums_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_forum_get_forums_by_courses',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns a list of forum instances in a provided set of courses, if
+            no courses are provided then all the forum instances the user has access to will be
+            returned.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/forum:viewdiscussion'
+    ),
+    'local_mobile_mod_forum_get_forum_discussions' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_forum_get_forum_discussions',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns a list of forum discussions contained within a given set of forums.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/forum:viewdiscussion, mod/forum:viewqandawithoutposting',
+    ),
+    'local_mobile_mod_forum_get_forum_discussion_posts' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_forum_get_forum_discussion_posts',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns a list of forum posts for a discussion.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/forum:viewdiscussion, mod/forum:viewqandawithoutposting',
+    ),
 );
 
 $services = array(
@@ -76,9 +100,9 @@ $services = array(
             'local_mobile_core_grades_get_grades',
             'message_airnotifier_is_system_configured',
             'message_airnotifier_are_notification_preferences_configured',
-            'mod_forum_get_forums_by_courses',
-            'mod_forum_get_forum_discussions',
-            'mod_forum_get_forum_discussion_posts',
+            'local_mobile_mod_forum_get_forums_by_courses',
+            'local_mobile_mod_forum_get_forum_discussions',
+            'local_mobile_mod_forum_get_forum_discussion_posts',
             'local_mobile_core_files_get_files'),
         'enabled' => 0,
         'restrictedusers' => 0,
