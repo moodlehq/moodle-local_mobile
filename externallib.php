@@ -1599,6 +1599,10 @@ class local_mobile_external extends external_api {
                             $context->id, 'mod_forum', 'intro', 0);
                         // Add the course module id to the object, this information is useful.
                         $forum->cmid = $cm->id;
+
+                        // Discussions count. This function does static request cache.
+                        $forum->numdiscussions = forum_count_discussions($forum, $cm, $modinfo->get_course());
+
                         // Add the forum to the array to return.
                         $arrforums[$forum->id] = (array) $forum;
                     }
@@ -1642,7 +1646,8 @@ class local_mobile_external extends external_api {
                     'completiondiscussions' => new external_value(PARAM_INT, 'Student must create discussions'),
                     'completionreplies' => new external_value(PARAM_INT, 'Student must post replies'),
                     'completionposts' => new external_value(PARAM_INT, 'Student must post discussions or replies'),
-                    'cmid' => new external_value(PARAM_INT, 'Course module id')
+                    'cmid' => new external_value(PARAM_INT, 'Course module id'),
+                    'numdiscussions' => new external_value(PARAM_INT, 'Number of discussions in the forum', VALUE_OPTIONAL)
                 ), 'forum'
             )
         );
