@@ -62,9 +62,9 @@ $functions = array(
         'type'          => 'read',
         'capabilities'  => 'mod/forum:viewdiscussion'
     ),
-    'local_mobile_mod_forum_get_forum_discussions' => array(
+    'local_mobile_mod_forum_get_forum_discussions_paginated' => array(
         'classname'     => 'local_mobile_external',
-        'methodname'    => 'mod_forum_get_forum_discussions',
+        'methodname'    => 'mod_forum_get_forum_discussions_paginated',
         'classpath'     => 'local/mobile/externallib.php',
         'description'   => 'Returns a list of forum discussions contained within a given set of forums.',
         'type'          => 'read',
@@ -116,7 +116,7 @@ $services = array(
             'local_mobile_core_user_add_user_device',
             'local_mobile_core_grades_get_grades',
             'local_mobile_mod_forum_get_forums_by_courses',
-            'local_mobile_mod_forum_get_forum_discussions',
+            'local_mobile_mod_forum_get_forum_discussions_paginated',
             'local_mobile_mod_forum_get_forum_discussion_posts',
             'local_mobile_core_files_get_files'),
         'enabled' => 0,
