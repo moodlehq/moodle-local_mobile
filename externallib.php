@@ -813,12 +813,12 @@ class local_mobile_external extends external_api {
     }
 
     /**
-     * Describes the parameters for mod_forum_get_forum_discussions.
+     * Describes the parameters for mod_forum_get_forum_discussions_paginated.
      *
      * @return external_external_function_parameters
      * @since Moodle 2.5
      */
-    public static function mod_forum_get_forum_discussions_parameters() {
+    public static function mod_forum_get_forum_discussions_paginated_parameters() {
         return new external_function_parameters (
             array(
                 'forumid' => new external_value(PARAM_INT, 'forum ID', VALUE_REQUIRED),
@@ -842,7 +842,7 @@ class local_mobile_external extends external_api {
      * @return array the forum discussion details
      * @since Moodle 2.8
      */
-    public static function mod_forum_get_forum_discussions($forumid, $sortby = 'timemodified', $sortdirection = 'DESC',
+    public static function mod_forum_get_forum_discussions_paginated($forumid, $sortby = 'timemodified', $sortdirection = 'DESC',
                                                     $page = -1, $perpage = 0) {
         global $CFG, $DB, $USER;
 
@@ -850,7 +850,7 @@ class local_mobile_external extends external_api {
 
         $warnings = array();
 
-        $params = self::validate_parameters(self::mod_forum_get_forum_discussions_parameters(),
+        $params = self::validate_parameters(self::mod_forum_get_forum_discussions_paginated_parameters(),
             array(
                 'forumid' => $forumid,
                 'sortby' => $sortby,
@@ -988,12 +988,12 @@ class local_mobile_external extends external_api {
     }
 
     /**
-     * Describes the mod_forum_get_forum_discussions return value.
+     * Describes the mod_forum_get_forum_discussions_paginated return value.
      *
      * @return external_single_structure
      * @since Moodle 2.8
      */
-    public static function mod_forum_get_forum_discussions_returns() {
+    public static function mod_forum_get_forum_discussions_paginated_returns() {
         return new external_single_structure(
             array(
                 'discussions' => new external_multiple_structure(
