@@ -79,7 +79,14 @@ $functions = array(
         'type'          => 'read',
         'capabilities'  => '',
     ),
-
+    'local_mobile_gradereport_user_get_grades_table' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'gradereport_user_get_grades_table',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Get the user/s report grades table for a course',
+        'type'        => 'read',
+        'capabilities'=> '',
+    )
 );
 
 $services = array(
@@ -109,7 +116,8 @@ $services = array(
             'core_message_block_contacts',
             'core_message_unblock_contacts',
             'core_message_get_contacts',
-            'core_message_search_contacts'
+            'core_message_search_contacts',
+            'local_mobile_gradereport_user_get_grades_table'
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
