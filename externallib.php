@@ -1521,18 +1521,21 @@ class local_mobile_external extends external_api {
         $context = context_course::instance($courseid);
         self::validate_context($context);
 
-        $user = null;
-        if (!empty($userid)) {
-            $user = core_user::get_user($userid, '*', MUST_EXIST);
-        }
-
         // Specific capabilities.
         require_capability('gradereport/user:view', $context);
 
+        $user = null;
+
+        if (empty($userid)) {
+            require_capability('moodle/grade:viewall', $context);
+        } else {
+            $user = core_user::get_user($userid, '*', MUST_EXIST);
+        }
+
         $access = false;
 
-        if (empty($user)) {
-            require_capability('moodle/grade:viewall', $context);
+        if (has_capability('moodle/grade:viewall', $context)) {
+            // Can view all course grades.
             $access = true;
         } else if ($userid == $USER->id and has_capability('moodle/grade:view', $context) and $course->showgrades) {
             // View own grades.
