@@ -72,7 +72,7 @@ function xmldb_local_mobile_upgrade($oldversion) {
             $dbman->drop_table($oldtable);
         }
 
-        upgrade_main_savepoint(true, 2014060300);
+        upgrade_plugin_savepoint(true, 2014060300, 'local', 'mobile');
     }
     return true;
 }
