@@ -29,7 +29,7 @@ $passport          = required_param('passport',  PARAM_RAW);    // Passport send
 
 // If the user is not logged, this will redirect him to the login page.
 // Once logged, it will be redirected again to this page and the app launched.
-require_login();
+require_login(0, false);
 
 // Check web services enabled.
 if (!$CFG->enablewebservices) {
