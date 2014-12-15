@@ -280,3 +280,85 @@ function local_mobile_get_context_from_params($param) {
         throw new invalid_parameter_exception('Missing parameters, please provide either context level with instance id or contextid');
     }
 }
+
+
+/**
+ * Search through course users.
+ *
+ * If $courseids contains the site course then this function searches
+ * through all undeleted and confirmed users.
+ *
+ * @param int|array $courseids Course ID or array of course IDs.
+ * @param string $searchtext the text to search for.
+ * @param string $sort the column name to order by.
+ * @param string|array $exceptions comma separated list or array of user IDs to exclude.
+ * @return array An array of {@link $USER} records.
+ */
+function local_mobile_message_search_users($courseids, $searchtext, $sort='', $exceptions='') {
+    global $CFG, $USER, $DB;
+    // Basic validation to ensure that the parameter $courseids is not an empty array or an empty value.
+    if (!$courseids) {
+        $courseids = array(SITEID);
+    }
+    // Allow an integer to be passed.
+    if (!is_array($courseids)) {
+        $courseids = array($courseids);
+    }
+    $fullname = $DB->sql_fullname();
+    $ufields = user_picture::fields('u');
+    if (!empty($sort)) {
+        $order = ' ORDER BY '. $sort;
+    } else {
+        $order = '';
+    }
+    $params = array(
+        'userid' => $USER->id,
+        'query' => "%$searchtext%"
+    );
+    if (empty($exceptions)) {
+        $exceptions = array();
+    } else if (!empty($exceptions) && is_string($exceptions)) {
+        $exceptions = explode(',', $exceptions);
+    }
+    // Ignore self and guest account.
+    $exceptions[] = $USER->id;
+    $exceptions[] = $CFG->siteguest;
+    // Exclude exceptions from the search result.
+    list($except, $params_except) = $DB->get_in_or_equal($exceptions, SQL_PARAMS_NAMED, 'param', false);
+    $except = ' AND u.id ' . $except;
+    $params = array_merge($params_except, $params);
+    if (in_array(SITEID, $courseids)) {
+        // Search on site level.
+        return $DB->get_records_sql("SELECT $ufields, mc.id as contactlistid, mc.blocked
+                                       FROM {user} u
+                                       LEFT JOIN {message_contacts} mc
+                                            ON mc.contactid = u.id AND mc.userid = :userid
+                                      WHERE u.deleted = '0' AND u.confirmed = '1'
+                                            AND (".$DB->sql_like($fullname, ':query', false).")
+                                            $except
+                                     $order", $params);
+    } else {
+        // Search in courses.
+        // Getting the context IDs or each course.
+        $contextids = array();
+        foreach ($courseids as $courseid) {
+            $context = context_course::instance($courseid);
+            $contextids = array_merge($contextids, $context->get_parent_context_ids(true));
+        }
+        list($contextwhere, $contextparams) = $DB->get_in_or_equal(array_unique($contextids), SQL_PARAMS_NAMED, 'context');
+        $params = array_merge($params, $contextparams);
+        // Everyone who has a role assignment in this course or higher.
+        // TODO: add enabled enrolment join here (skodak)
+        $users = $DB->get_records_sql("SELECT DISTINCT $ufields, mc.id as contactlistid, mc.blocked
+                                         FROM {user} u
+                                         JOIN {role_assignments} ra ON ra.userid = u.id
+                                         LEFT JOIN {message_contacts} mc
+                                              ON mc.contactid = u.id AND mc.userid = :userid
+                                        WHERE u.deleted = '0' AND u.confirmed = '1'
+                                              AND (".$DB->sql_like($fullname, ':query', false).")
+                                              AND ra.contextid $contextwhere
+                                              $except
+                                       $order", $params);
+        return $users;
+    }
+}

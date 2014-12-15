@@ -1945,6 +1945,9 @@ class local_mobile_external extends external_api {
     public static function core_message_search_contacts($searchtext, $onlymycourses = false) {
         global $CFG, $USER;
         require_once($CFG->libdir . '/enrollib.php');
+        require_once($CFG->dirroot . "/local/mobile/locallib.php");
+        require_once($CFG->dirroot . "/user/lib.php");
+
         $params = array('searchtext' => $searchtext, 'onlymycourses' => $onlymycourses);
         $params = self::validate_parameters(self::core_message_search_contacts_parameters(), $params);
         // Extra validation, we do not allow empty queries.
@@ -1961,7 +1964,8 @@ class local_mobile_external extends external_api {
             $courseids[] = SITEID;
         }
         // Retrieving the users matching the query.
-        $users = message_search_users($courseids, $params['searchtext']);
+        $users = local_mobile_message_search_users($courseids, $params['searchtext']);
+
         $results = array();
         foreach ($users as $user) {
             $results[$user->id] = $user;
