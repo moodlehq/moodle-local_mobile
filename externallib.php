@@ -1600,4 +1600,96 @@ class local_mobile_external extends external_api {
             )
         );
     }
+
+    /**
+     * Search contacts parameters description.
+     *
+     * @return external_function_parameters
+     * @since 2.5
+     */
+    public static function core_message_search_contacts_parameters() {
+        return new external_function_parameters(
+            array(
+                'searchtext' => new external_value(PARAM_CLEAN, 'String the user\'s fullname has to match to be found'),
+                'onlymycourses' => new external_value(PARAM_BOOL, 'Limit search to the user\'s courses',
+                    VALUE_DEFAULT, false)
+            )
+        );
+    }
+
+    /**
+     * Search contacts.
+     *
+     * @param string $searchtext query string.
+     * @param bool $onlymycourses limit the search to the user's courses only.
+     * @return external_description
+     * @since 2.5
+     */
+    public static function core_message_search_contacts($searchtext, $onlymycourses = false) {
+        global $CFG, $USER;
+        require_once($CFG->libdir . '/enrollib.php');
+        require_once($CFG->dirroot . "/local/mobile/locallib.php");
+        require_once($CFG->dirroot . "/user/lib.php");
+
+        $params = array('searchtext' => $searchtext, 'onlymycourses' => $onlymycourses);
+        $params = self::validate_parameters(self::core_message_search_contacts_parameters(), $params);
+        // Extra validation, we do not allow empty queries.
+        if ($params['searchtext'] === '') {
+            throw new moodle_exception('querystringcannotbeempty');
+        }
+        $courseids = array();
+        if ($params['onlymycourses']) {
+            $mycourses = enrol_get_my_courses(array('id'));
+            foreach ($mycourses as $mycourse) {
+                $courseids[] = $mycourse->id;
+            }
+        } else {
+            $courseids[] = SITEID;
+        }
+        // Retrieving the users matching the query.
+        $users = message_search_users($courseids, $params['searchtext']);
+
+        $results = array();
+        foreach ($users as $user) {
+            $results[$user->id] = $user;
+        }
+        // Reorganising information.
+        foreach ($results as &$user) {
+            $newuser = array(
+                'id' => $user->id,
+                'fullname' => fullname($user)
+            );
+            // Avoid undefined property notice as phone not specified.
+            $user->phone1 = null;
+            $user->phone2 = null;
+            // Try to get the user picture, but sometimes this method can return null.
+            $userdetails = user_get_user_details($user, null, array('profileimageurl', 'profileimageurlsmall'));
+            if (!empty($userdetails)) {
+                $newuser['profileimageurl'] = $userdetails['profileimageurl'];
+                $newuser['profileimageurlsmall'] = $userdetails['profileimageurlsmall'];
+            }
+            $user = $newuser;
+        }
+        return $results;
+    }
+    /**
+     * Search contacts return description.
+     *
+     * @return external_description
+     * @since 2.5
+     */
+    public static function core_message_search_contacts_returns() {
+        return new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'id' => new external_value(PARAM_INT, 'User ID'),
+                    'fullname' => new external_value(PARAM_NOTAGS, 'User full name'),
+                    'profileimageurl' => new external_value(PARAM_URL, 'User picture URL', VALUE_OPTIONAL),
+                    'profileimageurlsmall' => new external_value(PARAM_URL, 'Small user picture URL', VALUE_OPTIONAL)
+                )
+            ),
+            'List of contacts'
+        );
+    }
+
 }
