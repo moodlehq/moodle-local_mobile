@@ -47,6 +47,12 @@ $functions = array(
 $services = array(
    'Moodle Mobile additional features service'  => array(
         'functions' => array (
+            'core_webservice_get_site_info',
+            'core_enrol_get_users_courses',
+            'core_notes_create_notes',
+            'core_message_send_instant_messages',
+            'core_enrol_get_enrolled_users',
+            'core_user_get_course_user_profiles',
             'moodle_enrol_get_users_courses',
             'moodle_enrol_get_enrolled_users',
             'moodle_user_get_users_by_id',
