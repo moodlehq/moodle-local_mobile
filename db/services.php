@@ -94,6 +94,14 @@ $functions = array(
         'description' => 'Search for contacts',
         'type'        => 'read',
         'capabilities'=> '',
+    ),
+    'local_mobile_core_message_get_blocked_users' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_message_get_blocked_users',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Retrieve a list of users blocked',
+        'type'          => 'read',
+        'capabilities'  => '',
     )
 );
 
@@ -132,7 +140,8 @@ $services = array(
             'core_message_get_contacts',
             'core_message_search_contacts',
             'local_mobile_core_message_search_contacts',
-            'local_mobile_gradereport_user_get_grades_table'
+            'local_mobile_gradereport_user_get_grades_table',
+            'local_mobile_core_message_get_blocked_users'
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
