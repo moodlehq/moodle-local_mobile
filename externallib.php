@@ -1883,4 +1883,108 @@ class local_mobile_external extends external_api {
             )
         );
     }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function core_group_get_course_user_groups_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'id of course'),
+                'userid' => new external_value(PARAM_INT, 'id of user')
+            )
+        );
+    }
+
+    /**
+     * Get all groups in the specified course for the specified user
+     *
+     * @param int $courseid id of course
+     * @param int $userid id of user
+     * @return array of group objects (id, name ...)
+     * @since Moodle 2.9
+     */
+    public static function core_group_get_course_user_groups($courseid, $userid) {
+        global $USER;
+
+        // Warnings array, it can be empty at the end but is mandatory.
+        $warnings = array();
+
+        $params = array(
+            'courseid' => $courseid,
+            'userid' => $userid
+        );
+        $params = self::validate_parameters(self::core_group_get_course_user_groups_parameters(), $params);
+        $courseid = $params['courseid'];
+        $userid = $params['userid'];
+
+        // Validate course and user. get_course throws an exception if the course does not exists.
+        $course = get_course($courseid);
+        $user = core_user::get_user($userid, 'id', MUST_EXIST);
+
+        // Security checks.
+        $context = context_course::instance($courseid);
+        self::validate_context($context);
+
+         // Check if we have permissions for retrieve the information.
+        if ($userid != $USER->id) {
+            if (!has_capability('moodle/course:managegroups', $context)) {
+                throw new moodle_exception('accessdenied', 'admin');
+            }
+            // Validate if the user is enrolled in the course.
+            if (!is_enrolled($context, $userid)) {
+                // We return a warning because the function does not fail for not enrolled users.
+                $warning['item'] = 'course';
+                $warning['itemid'] = $courseid;
+                $warning['warningcode'] = '1';
+                $warning['message'] = "User $userid is not enrolled in course $courseid";
+                $warnings[] = $warning;
+            }
+        }
+
+        $usergroups = array();
+        if (empty($warnings)) {
+            $groups = groups_get_all_groups($courseid, $userid, 0, 'g.id, g.name, g.description, g.descriptionformat');
+
+            foreach ($groups as $group) {
+                list($group->description, $group->descriptionformat) =
+                    external_format_text($group->description, $group->descriptionformat,
+                            $context->id, 'group', 'description', $group->id);
+                $usergroups[] = (array)$group;
+            }
+        }
+
+        $results = array(
+            'groups' => $usergroups,
+            'warnings' => $warnings
+        );
+        return $results;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function core_group_get_course_user_groups_returns() {
+        return new external_single_structure(
+            array(
+                'groups' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'group record id'),
+                            'name' => new external_value(PARAM_TEXT, 'multilang compatible name, course unique'),
+                            'description' => new external_value(PARAM_RAW, 'group description text'),
+                            'descriptionformat' => new external_format_value('description')
+                        )
+                    )
+                ),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
 }
