@@ -102,7 +102,15 @@ $functions = array(
         'description'   => 'Retrieve a list of users blocked',
         'type'          => 'read',
         'capabilities'  => '',
-    )
+    ),
+    'local_mobile_core_group_get_course_user_groups' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'core_group_get_course_user_groups',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Returns all groups in specified course for the specified user.',
+        'type'        => 'read',
+        'capabilities'=> 'moodle/course:managegroups',
+    ),
 );
 
 $services = array(
@@ -141,7 +149,8 @@ $services = array(
             'core_message_search_contacts',
             'local_mobile_core_message_search_contacts',
             'local_mobile_gradereport_user_get_grades_table',
-            'local_mobile_core_message_get_blocked_users'
+            'local_mobile_core_message_get_blocked_users',
+            'local_mobile_core_group_get_course_user_groups'
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
