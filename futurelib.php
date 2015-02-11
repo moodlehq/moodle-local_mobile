@@ -24,6 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die;
 
+require_once("$CFG->dirroot/course/lib.php");
+
+
 if (!class_exists("core_user")) {
 
     /**
@@ -378,4 +381,101 @@ if (!function_exists("message_format_message_text")) {
         return format_text($messagetext, $format, $options);
     }
 
+}
+
+require_once($CFG->dirroot . "/calendar/lib.php");
+
+if (!function_exists("calendar_get_events_by_id")) {
+    /** Get calendar events by id
+     *
+     * @since Moodle 2.5
+     * @param array $eventids list of event ids
+     * @return array Array of event entries, empty array if nothing found
+     */
+
+    function calendar_get_events_by_id($eventids) {
+        global $DB;
+
+        if (!is_array($eventids) || empty($eventids)) {
+            return array();
+        }
+        list($wheresql, $params) = $DB->get_in_or_equal($eventids);
+        $wheresql = "id $wheresql";
+
+        return $DB->get_records_select('event', $wheresql, $params);
+    }
+}
+
+require_once($CFG->libdir . "/grouplib.php");
+
+if (!function_exists("groups_get_my_groups")) {
+    /**
+     * Gets array of all groups in current user.
+     *
+     * @since Moodle 2.5
+     * @category group
+     * @return array Returns an array of the group objects.
+     */
+    function groups_get_my_groups() {
+        global $DB, $USER;
+        return $DB->get_records_sql("SELECT *
+                                       FROM {groups_members} gm
+                                       JOIN {groups} g
+                                        ON g.id = gm.groupid
+                                      WHERE gm.userid = ?
+                                       ORDER BY name ASC", array($USER->id));
+    }
+}
+
+if (!function_exists("get_course")) {
+    /**
+     * Gets a course object from database. If the course id corresponds to an
+     * already-loaded $COURSE or $SITE object, then the loaded object will be used,
+     * saving a database query.
+     *
+     * If it reuses an existing object, by default the object will be cloned. This
+     * means you can modify the object safely without affecting other code.
+     *
+     * @param int $courseid Course id
+     * @param bool $clone If true (default), makes a clone of the record
+     * @return stdClass A course object
+     * @throws dml_exception If not found in database
+     */
+    function get_course($courseid, $clone = true) {
+        global $DB, $COURSE, $SITE;
+        if (!empty($COURSE->id) && $COURSE->id == $courseid) {
+            return $clone ? clone($COURSE) : $COURSE;
+        } else if (!empty($SITE->id) && $SITE->id == $courseid) {
+            return $clone ? clone($SITE) : $SITE;
+        } else {
+            return $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+        }
+    }
+}
+
+if (!function_exists('user_remove_user_device')) {
+    /**
+     * Remove a user device from the Moodle database (for PUSH notifications usually).
+     *
+     * @param string $uuid The device UUID.
+     * @param string $appid The app id. If empty all the devices matching the UUID for the user will be removed.
+     * @return bool true if removed, false if the device didn't exists in the database
+     * @since Moodle 2.9
+     */
+    function user_remove_user_device($uuid, $appid = "") {
+        global $DB, $USER;
+
+        $conditions = array('uuid' => $uuid, 'userid' => $USER->id);
+        if (!empty($appid)) {
+            $conditions['appid'] = $appid;
+        }
+
+        if (!$DB->count_records('local_mobile_user_devices', $conditions)) {
+            return false;
+        }
+
+        $DB->delete_records('local_mobile_user_devices', $conditions);
+
+        return true;
+    }
 }
