@@ -26,6 +26,13 @@ defined('MOODLE_INTERNAL') || die;
 
 $functions = array(
 
+    'local_mobile_core_user_remove_user_device' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_user_remove_user_device',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Remove user devices.',
+        'type'          => 'write',
+    ),
     'local_mobile_gradereport_user_get_grades_table' => array(
         'classname'   => 'local_mobile_external',
         'methodname'  => 'gradereport_user_get_grades_table',
@@ -99,7 +106,8 @@ $services = array(
             'local_mobile_core_message_search_contacts',
             'local_mobile_gradereport_user_get_grades_table',
             'local_mobile_core_message_get_blocked_users',
-            'local_mobile_core_group_get_course_user_groups'
+            'local_mobile_core_group_get_course_user_groups',
+            'local_mobile_core_user_remove_user_device'
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
