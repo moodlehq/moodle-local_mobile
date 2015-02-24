@@ -156,7 +156,6 @@ $services = array(
             'local_mobile_mod_forum_get_forum_discussions_paginated',
             'local_mobile_mod_forum_get_forum_discussion_posts',
             'local_mobile_core_files_get_files',
-            'core_message_get_messages',
             'core_message_create_contacts',
             'core_message_delete_contacts',
             'core_message_block_contacts',
