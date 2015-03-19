@@ -107,7 +107,9 @@ $services = array(
             'local_mobile_gradereport_user_get_grades_table',
             'local_mobile_core_message_get_blocked_users',
             'local_mobile_core_group_get_course_user_groups',
-            'local_mobile_core_user_remove_user_device'
+            'local_mobile_core_user_remove_user_device',
+            'mod_assign_get_assignments',
+            'mod_assign_get_submissions',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
