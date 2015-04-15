@@ -1385,4 +1385,729 @@ class local_mobile_external extends external_api {
             ), 'notes'
         );
     }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function core_course_view_course_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'id of the course'),
+                'sectionnumber' => new external_value(PARAM_INT, 'section number', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Simulate the view.php web interface page, logging events, completion, etc...
+     *
+     * @param int $courseid id of course
+     * @param int $sectionnumber sectionnumber (0, 1, 2...)
+     * @return array of warnings and status result
+     * @since Moodle 2.9
+     * @throws moodle_exception
+     */
+    public static function core_course_view_course($courseid, $sectionnumber = 0) {
+        global $CFG;
+        require_once($CFG->dirroot . "/course/lib.php");
+
+        $params = self::validate_parameters(self::core_course_view_course_parameters(),
+                                            array(
+                                                'courseid' => $courseid,
+                                                'sectionnumber' => $sectionnumber
+                                            ));
+
+        $warnings = array();
+
+        $course = get_course($params['courseid']);
+        $context = context_course::instance($course->id);
+        self::validate_context($context);
+
+        if (!empty($params['sectionnumber'])) {
+
+            // Get section details and check it exists.
+            $modinfo = get_fast_modinfo($course);
+            $coursesection = $modinfo->get_section_info($params['sectionnumber'], MUST_EXIST);
+
+            // Check user is allowed to see it.
+            if (!$coursesection->uservisible) {
+                require_capability('moodle/course:viewhiddensections', $context);
+            }
+        }
+
+        $eventdata = array('context' => $context);
+
+        if (!empty($sectionnumber)) {
+            $eventdata['other']['coursesectionnumber'] = $params['sectionnumber'];
+        }
+
+        $event = \core\event\course_viewed::create($eventdata);
+        $event->trigger();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function core_course_view_course_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+        /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function core_user_view_user_list_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'id of the course, 0 for site')
+            )
+        );
+    }
+
+    /**
+     * Simulate the /user/index.php web interface page triggering events
+     *
+     * @param int $courseid id of course
+     * @return array of warnings and status result
+     * @since Moodle 2.9
+     * @throws moodle_exception
+     */
+    public static function core_user_view_user_list($courseid) {
+        global $CFG;
+        require_once($CFG->dirroot . "/user/lib.php");
+
+        $params = self::validate_parameters(self::core_user_view_user_list_parameters(),
+                                            array(
+                                                'courseid' => $courseid
+                                            ));
+
+        $warnings = array();
+
+        if (empty($params['courseid'])) {
+            $params['courseid'] = SITEID;
+        }
+
+        $course = get_course($params['courseid']);
+
+        if ($course->id == SITEID) {
+            $context = context_system::instance();
+        } else {
+            $context = context_course::instance($course->id);
+        }
+        self::validate_context($context);
+
+        if ($course->id == SITEID) {
+            require_capability('moodle/site:viewparticipants', $context);
+        } else {
+            require_capability('moodle/course:viewparticipants', $context);
+        }
+
+        $event = \core\event\user_list_viewed::create(array(
+            'objectid' => $course->id,
+            'courseid' => $course->id,
+            'context' => $context,
+            'other' => array(
+                'courseshortname' => $course->shortname,
+                'coursefullname' => $course->fullname
+            )
+        ));
+        $event->trigger();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function core_user_view_user_list_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function core_user_view_user_profile_parameters() {
+        return new external_function_parameters(
+            array(
+                'userid' => new external_value(PARAM_INT, 'id of the user, 0 for current user', VALUE_REQUIRED),
+                'courseid' => new external_value(PARAM_INT, 'id of the course, default site course', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Simulate the /user/index.php and /user/profile.php web interface page triggering events
+     *
+     * @param int $userid id of user
+     * @param int $courseid id of course
+     * @return array of warnings and status result
+     * @since Moodle 2.9
+     * @throws moodle_exception
+     */
+    public static function core_user_view_user_profile($userid, $courseid = 0) {
+        global $CFG, $USER;
+        require_once($CFG->dirroot . "/user/profile/lib.php");
+
+        $params = self::validate_parameters(self::core_user_view_user_profile_parameters(),
+                                            array(
+                                                'userid' => $userid,
+                                                'courseid' => $courseid
+                                            ));
+
+        $warnings = array();
+
+        if (empty($params['userid'])) {
+            $params['userid'] = $USER->id;
+        }
+
+        if (empty($params['courseid'])) {
+            $params['courseid'] = SITEID;
+        }
+
+        $course = get_course($params['courseid']);
+        $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
+
+        if ($user->deleted) {
+            throw new moodle_exception('userdeleted');
+        }
+        if (isguestuser($user)) {
+            // Can not view profile of guest - thre is nothing to see there.
+            throw new moodle_exception('invaliduserid');
+        }
+
+        if ($course->id == SITEID) {
+            $coursecontext = context_system::instance();;
+        } else {
+            $coursecontext = context_course::instance($course->id);
+        }
+        self::validate_context($coursecontext);
+
+        $currentuser = $USER->id == $user->id;
+        $usercontext = context_user::instance($user->id);
+
+        if (!$currentuser and
+                !has_capability('moodle/user:viewdetails', $coursecontext) and
+                !has_capability('moodle/user:viewdetails', $usercontext)) {
+            throw new moodle_exception('cannotviewprofile');
+        }
+
+        // Case like user/profile.php.
+        if ($course->id == SITEID) {
+            $eventdata = array(
+                'objectid' => $user->id,
+                'relateduserid' => $user->id,
+                'context' => $usercontext
+            );
+
+            if (!empty($course)) {
+                $eventdata['courseid'] = $course->id;
+                $eventdata['other'] = array(
+                    'courseid' => $course->id,
+                    'courseshortname' => $course->shortname,
+                    'coursefullname' => $course->fullname
+                );
+            }
+
+            $event = \core\event\user_profile_viewed::create($eventdata);
+            $event->add_record_snapshot('user', $user);
+            $event->trigger();
+        } else {
+            // Case like user/view.php.
+            if (!$currentuser and !is_enrolled($coursecontext, $user->id)) {
+                throw new moodle_exception('notenrolledprofile');
+            }
+
+            $eventdata = array(
+                'objectid' => $user->id,
+                'relateduserid' => $user->id,
+                'context' => $coursecontext
+            );
+
+            if (!empty($course)) {
+                $eventdata['courseid'] = $course->id;
+                $eventdata['other'] = array(
+                    'courseid' => $course->id,
+                    'courseshortname' => $course->shortname,
+                    'coursefullname' => $course->fullname
+                );
+            }
+
+            $event = \core\event\user_profile_viewed::create($eventdata);
+            $event->add_record_snapshot('user', $user);
+            $event->trigger();
+        }
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function core_user_view_user_profile_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function mod_forum_view_forum_parameters() {
+        return new external_function_parameters(
+            array(
+                'forumid' => new external_value(PARAM_INT, 'forum instance id')
+            )
+        );
+    }
+
+    /**
+     * Simulate the forum/view.php web interface page: trigger events, completion, etc...
+     *
+     * @param int $forumid the forum instance id
+     * @return array of warnings and status result
+     * @since Moodle 2.9
+     * @throws moodle_exception
+     */
+    public static function mod_forum_view_forum($forumid) {
+        global $DB, $CFG;
+        require_once($CFG->dirroot . "/mod/forum/lib.php");
+
+        $params = self::validate_parameters(self::mod_forum_view_forum_parameters(),
+                                            array(
+                                                'forumid' => $forumid
+                                            ));
+        $warnings = array();
+
+        // Request and permission validation.
+        $forum = $DB->get_record('forum', array('id' => $params['forumid']), 'id', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($forum, 'forum');
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // Completion.
+        $completion = new completion_info($course);
+        $completion->set_module_viewed($cm);
+
+        // Trigger course_module_viewed event.
+        $params = array(
+            'context' => $context,
+            'objectid' => $forum->id
+        );
+
+        $event = \mod_forum\event\course_module_viewed::create($params);
+        $event->add_record_snapshot('course_modules', $cm);
+        $event->add_record_snapshot('course', $course);
+        $event->add_record_snapshot('forum', $forum);
+        $event->trigger();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function mod_forum_view_forum_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function mod_forum_view_forum_discussion_parameters() {
+        return new external_function_parameters(
+            array(
+                'discussionid' => new external_value(PARAM_INT, 'discussion id')
+            )
+        );
+    }
+
+    /**
+     * Simulate the forum/discuss.php web interface page: trigger events
+     *
+     * @param int $discussionid the discussion id
+     * @return array of warnings and status result
+     * @since Moodle 2.9
+     * @throws moodle_exception
+     */
+    public static function mod_forum_view_forum_discussion($discussionid) {
+        global $DB, $CFG;
+        require_once($CFG->dirroot . "/mod/forum/lib.php");
+
+        $params = self::validate_parameters(self::mod_forum_view_forum_discussion_parameters(),
+                                            array(
+                                                'discussionid' => $discussionid
+                                            ));
+        $warnings = array();
+
+        $discussion = $DB->get_record('forum_discussions', array('id' => $params['discussionid']), '*', MUST_EXIST);
+        $forum = $DB->get_record('forum', array('id' => $discussion->forum), '*', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($forum, 'forum');
+
+        // Validate the module context. It checks everything that affects the module visibility (including groupings, etc..).
+        $modcontext = context_module::instance($cm->id);
+        self::validate_context($modcontext);
+
+        // Call the forum/lib API.
+        $params = array(
+            'context' => $modcontext,
+            'objectid' => $discussion->id,
+        );
+
+        $event = \mod_forum\event\discussion_viewed::create($params);
+        $event->add_record_snapshot('forum_discussions', $discussion);
+        $event->add_record_snapshot('forum', $forum);
+        $event->trigger();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function mod_forum_view_forum_discussion_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function gradereport_user_view_grade_report_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'id of the course'),
+                'userid' => new external_value(PARAM_INT, 'id of the user, 0 means current user', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Trigger the user report events, do the same that the web interface view of the report
+     *
+     * @param int $courseid id of course
+     * @param int $userid id of the user the report belongs to
+     * @return array of warnings and status result
+     * @since Moodle 2.9
+     * @throws moodle_exception
+     */
+    public static function gradereport_user_view_grade_report($courseid, $userid = 0) {
+        global $CFG, $USER;
+        require_once($CFG->dirroot . "/grade/lib.php");
+        require_once($CFG->dirroot . "/grade/report/user/lib.php");
+
+        $params = self::validate_parameters(self::gradereport_user_view_grade_report_parameters(),
+                                            array(
+                                                'courseid' => $courseid,
+                                                'userid' => $userid
+                                            ));
+
+        $warnings = array();
+
+        $course = get_course($params['courseid']);
+
+        $context = context_course::instance($course->id);
+        self::validate_context($context);
+
+        $userid = $params['userid'];
+        if (empty($userid)) {
+            $userid = $USER->id;
+        } else {
+            $user = core_user::get_user($userid, '*', MUST_EXIST);
+            if ($user->deleted) {
+                throw new moodle_exception('userdeleted');
+            }
+            if (isguestuser($user)) {
+                // Can not view profile of guest - thre is nothing to see there.
+                throw new moodle_exception('invaliduserid');
+            }
+        }
+
+        $access = false;
+
+        if (has_capability('moodle/grade:viewall', $context)) {
+            // Can view all course grades (any user).
+            $access = true;
+        } else if ($userid == $USER->id and has_capability('moodle/grade:view', $context) and $course->showgrades) {
+            // View own grades.
+            $access = true;
+        }
+
+        if (!$access) {
+            throw new moodle_exception('nopermissiontoviewgrades', 'error');
+        }
+
+        // Create a report instance. We don't need the gpr second parameter.
+        $report = new grade_report_user($course->id, null, $context, $userid);
+        $report->viewed();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function gradereport_user_view_grade_report_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since 2.9
+     */
+    public static function core_message_mark_message_read_parameters() {
+        return new external_function_parameters(
+            array(
+                'messageid' => new external_value(PARAM_INT, 'id of the message (in the message table)'),
+                'timeread' => new external_value(PARAM_INT, 'timestamp for when the message should be marked read')
+            )
+        );
+    }
+
+    /**
+     * Mark a single message as read, trigger message_viewed event
+     *
+     * @param  int $messageid id of the message (in the message table)
+     * @param  int $timeread timestamp for when the message should be marked read
+     * @return external_description
+     * @throws invalid_parameter_exception
+     * @throws moodle_exception
+     * @since 2.9
+     */
+    public static function core_message_mark_message_read($messageid, $timeread) {
+        global $CFG, $DB, $USER;
+        require_once($CFG->dirroot . "/message/lib.php");
+
+        // Check if private messaging between users is allowed.
+        if (empty($CFG->messaging)) {
+            throw new moodle_exception('disabled', 'message');
+        }
+
+        // Warnings array, it can be empty at the end but is mandatory.
+        $warnings = array();
+
+        // Validate params.
+        $params = array(
+            'messageid' => $messageid,
+            'timeread' => $timeread
+        );
+        $params = self::validate_parameters(self::core_message_mark_message_read_parameters(), $params);
+
+        // Validate context.
+        $context = context_system::instance();
+        self::validate_context($context);
+
+        $message = $DB->get_record('message', array('id' => $params['messageid']), '*', MUST_EXIST);
+
+        if ($message->useridto != $USER->id) {
+            throw new invalid_parameter_exception('Invalid messageid, you don\'t have permissions to mark this message as read');
+        }
+
+        $messageid = message_mark_message_read($message, $params['timeread']);
+
+        $results = array(
+            'messageid' => $messageid,
+            'warnings' => $warnings
+        );
+        return $results;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since 2.9
+     */
+    public static function core_message_mark_message_read_returns() {
+        return new external_single_structure(
+            array(
+                'messageid' => new external_value(PARAM_INT, 'the id of the message in the message_read table'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 2.9
+     */
+    public static function core_notes_view_notes_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'course id, 0 for notes at system level'),
+                'userid' => new external_value(PARAM_INT, 'user id, 0 means view all the user notes', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Simulates the web interface view of notes/index.php: trigger events
+     *
+     * @param int $courseid id of the course
+     * @param int $userid id of the user
+     * @return array of warnings and status result
+     * @since Moodle 2.9
+     * @throws moodle_exception
+     */
+    public static function core_notes_view_notes($courseid, $userid = 0) {
+        global $CFG;
+        require_once($CFG->dirroot . "/notes/lib.php");
+
+        if (empty($CFG->enablenotes)) {
+            throw new moodle_exception('notesdisabled', 'notes');
+        }
+
+        $warnings = array();
+        $arrayparams = array(
+            'courseid' => $courseid,
+            'userid' => $userid
+        );
+        $params = self::validate_parameters(self::core_notes_view_notes_parameters(), $arrayparams);
+
+        if (empty($params['courseid'])) {
+            $params['courseid'] = SITEID;
+        }
+
+        $course = get_course($params['courseid']);
+
+        if ($course->id == SITEID) {
+            $context = context_system::instance();
+        } else {
+            $context = context_course::instance($course->id);
+        }
+
+        // First of all, validate the context before do further permission checks.
+        self::validate_context($context);
+        require_capability('moodle/notes:view', $context);
+
+        if (!empty($params['userid'])) {
+            $user = core_user::get_user($params['userid'], 'id, deleted', MUST_EXIST);
+
+            if ($user->deleted) {
+                throw new moodle_exception('userdeleted');
+            }
+
+            if (isguestuser($user)) {
+                throw new moodle_exception('invaliduserid');
+            }
+
+            if ($course->id != SITEID and !is_enrolled($context, $user, '', true)) {
+                throw new moodle_exception('notenrolledprofile');
+            }
+        }
+
+        $event = \core\event\notes_viewed::create(array(
+            'relateduserid' => $params['userid'],
+            'context' => $context
+        ));
+        $event->trigger();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 2.9
+     */
+    public static function core_notes_view_notes_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
 }
