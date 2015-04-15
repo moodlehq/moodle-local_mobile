@@ -169,6 +169,78 @@ $functions = array(
         'type'          => 'read',
         'capabilities'  => 'moodle/notes:view',
     ),
+
+    'local_mobile_core_course_view_course' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'core_course_view_course',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Log that the course was viewed',
+        'type'        => 'write'
+    ),
+
+    'local_mobile_core_user_view_user_list' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_user_view_user_list',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulates the web-interface view of user/index.php (triggering events).',
+        'type'          => 'write',
+        'capabilities'  => 'moodle/course:viewparticipants',
+    ),
+
+    'local_mobile_core_user_view_user_profile' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_user_view_user_profile',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulates the web-interface view of user/view.php and user/profile.php (triggering events).',
+        'type'          => 'write',
+        'capabilities'  => 'moodle/user:viewdetails',
+    ),
+
+    'local_mobile_gradereport_user_view_grade_report' => array(
+        'classname' => 'local_mobile_external',
+        'methodname' => 'gradereport_user_view_grade_report',
+        'classpath' => 'local/mobile/externallib.php',
+        'description' => 'Trigger the report view event',
+        'type' => 'write',
+        'capabilities' => 'gradereport/user:view'
+    ),
+
+    'local_mobile_mod_forum_view_forum' => array(
+        'classname' => 'local_mobile_external',
+        'methodname' => 'mod_forum_view_forum',
+        'classpath' => 'local/mobile/externallib.php',
+        'description' => 'Simulate the view.php web interface page: trigger events, completion, etc...',
+        'type' => 'write',
+        'capabilities' => 'mod/forum:viewdiscussion'
+    ),
+
+    'local_mobile_mod_forum_view_forum_discussion' => array(
+        'classname' => 'local_mobile_external',
+        'methodname' => 'mod_forum_view_forum_discussion',
+        'classpath' => 'local/mobile/externallib.php',
+        'description' => 'Simulate the forum/discuss.php web interface page: trigger events, completion, etc...',
+        'type' => 'write',
+        'capabilities' => 'mod/forum:viewdiscussion'
+    ),
+
+    'local_mobile_core_message_mark_message_read' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_message_mark_message_read',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Mark a single message as read, trigger message_viewed event.',
+        'type'          => 'write',
+        'capabilities'  => '',
+    ),
+
+    'local_mobile_core_notes_view_notes' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_notes_view_notes',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulates the web interface view of notes/index.php: trigger events.',
+        'type'          => 'write',
+        'capabilities'  => 'moodle/notes:view',
+    ),
+
 );
 
 $services = array(
@@ -219,6 +291,14 @@ $services = array(
             'local_mobile_core_comment_get_comments',
             'local_mobile_core_notes_get_course_notes',
             'local_mobile_core_rating_get_item_ratings',
+            'local_mobile_core_course_view_course',
+            'local_mobile_core_user_view_user_list',
+            'local_mobile_core_user_view_user_profile',
+            'local_mobile_gradereport_user_view_grade_report',
+            'local_mobile_core_message_mark_message_read',
+            'local_mobile_core_notes_view_notes',
+            'local_mobile_mod_forum_view_forum',
+            'local_mobile_mod_forum_view_forum_discussion',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
