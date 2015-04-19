@@ -1288,21 +1288,28 @@ class local_mobile_external extends external_api {
                 $user->id = $discussion->userid;
                 $user = username_load_fields_from_object($user, $discussion);
                 $discussion->userfullname = fullname($user, $canviewfullname);
-                $discussion->userpictureurl = moodle_url::make_pluginfile_url(
-                    context_user::instance($user->id)->id, 'user', 'icon', null, '/', 'f1');
-                // Fix the pluginfile.php link.
-                $discussion->userpictureurl = str_replace("pluginfile.php", "webservice/pluginfile.php",
-                    $discussion->userpictureurl);
+                // We can have post written by users that are deleted. In this case, those users don't have a valid context.
+                $usercontext = context_user::instance($user->id, IGNORE_MISSING);
+                if ($usercontext) {
+                    $discussion->userpictureurl = moodle_url::make_pluginfile_url(
+                        $usercontext->id, 'user', 'icon', null, '/', 'f1')->out(false);
+                } else {
+                    $discussion->userpictureurl = '';
+                }
 
                 $usermodified = new stdclass();
                 $usermodified->id = $discussion->usermodified;
                 $usermodified = username_load_fields_from_object($usermodified, $discussion, 'um');
                 $discussion->usermodifiedfullname = fullname($usermodified, $canviewfullname);
-                $discussion->usermodifiedpictureurl = moodle_url::make_pluginfile_url(
-                    context_user::instance($usermodified->id)->id, 'user', 'icon', null, '/', 'f1');
-                // Fix the pluginfile.php link.
-                $discussion->usermodifiedpictureurl = str_replace("pluginfile.php", "webservice/pluginfile.php",
-                    $discussion->usermodifiedpictureurl);
+
+                // We can have post written by users that are deleted. In this case, those users don't have a valid context.
+                $usercontext = context_user::instance($usermodified->id, IGNORE_MISSING);
+                if ($usercontext) {
+                    $discussion->usermodifiedpictureurl = moodle_url::make_pluginfile_url(
+                        $usercontext->id, 'user', 'icon', null, '/', 'f1')->out(false);
+                } else {
+                    $discussion->usermodifiedpictureurl = '';
+                }
 
                 // Rewrite embedded images URLs.
                 list($discussion->message, $discussion->messageformat) =
@@ -1519,11 +1526,14 @@ class local_mobile_external extends external_api {
             $user->id = $post->userid;
             $user = username_load_fields_from_object($user, $post);
             $post->userfullname = fullname($user, $canviewfullname);
-            $post->userpictureurl = moodle_url::make_pluginfile_url(
-                    context_user::instance($user->id)->id, 'user', 'icon', null, '/', 'f1');
-            // Fix the pluginfile.php link.
-            $post->userpictureurl = str_replace("pluginfile.php", "webservice/pluginfile.php",
-                $post->userpictureurl);
+
+            $usercontext = context_user::instance($user->id, IGNORE_MISSING);
+            if ($usercontext) {
+                $post->userpictureurl = moodle_url::make_pluginfile_url(
+                        $usercontext->id, 'user', 'icon', null, '/', 'f1')->out(false);
+            } else {
+                $post->userpictureurl = '';
+            }
 
             // Rewrite embedded images URLs.
             list($post->message, $post->messageformat) =
@@ -3059,13 +3069,18 @@ class local_mobile_external extends external_api {
                 if ($rating->rating > $maxrating) {
                     $rating->rating = $maxrating;
                 }
-                $usercontext = context_user::instance($rating->userid);
-                $profileimageurl = moodle_url::make_webservice_pluginfile_url($usercontext->id, 'user', 'icon', null, '/', 'f1');
 
+                $profileimageurl = '';
+                // We can have ratings from deleted users. In this case, those users don't have a valid context.
+                $usercontext = context_user::instance($rating->userid, IGNORE_MISSING);
+                if ($usercontext) {
+                    $profileimageurl = moodle_url::make_pluginfile_url($usercontext->id, 'user', 'icon', null,
+                                                                                    '/', 'f1')->out(false);
+                }
                 $result = array();
                 $result['id'] = $rating->id;
                 $result['userid'] = $rating->userid;
-                $result['userpictureurl'] = $profileimageurl->out(false);
+                $result['userpictureurl'] = $profileimageurl;
                 $result['userfullname'] = fullname($rating);
                 $result['rating'] = $scalemenu[$rating->rating];
                 $result['timemodified'] = $rating->timemodified;
