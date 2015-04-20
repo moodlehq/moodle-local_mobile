@@ -2110,4 +2110,83 @@ class local_mobile_external extends external_api {
         );
     }
 
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function mod_resource_view_resource_parameters() {
+        return new external_function_parameters(
+            array(
+                'resourceid' => new external_value(PARAM_INT, 'resource instance id')
+            )
+        );
+    }
+
+    /**
+     * Simulate the resource/view.php web interface page: trigger events, completion, etc...
+     *
+     * @param int $resourceid the resource instance id
+     * @return array of warnings and status result
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function mod_resource_view_resource($resourceid) {
+        global $DB, $CFG;
+        require_once($CFG->dirroot . "/mod/resource/lib.php");
+
+        $params = self::validate_parameters(self::mod_resource_view_resource_parameters(),
+                                            array(
+                                                'resourceid' => $resourceid
+                                            ));
+        $warnings = array();
+
+        // Request and permission validation.
+        $resource = $DB->get_record('resource', array('id' => $params['resourceid']), 'id', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($resource, 'resource');
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        require_capability('mod/resource:view', $context);
+
+        // Completion.
+        $completion = new completion_info($course);
+        $completion->set_module_viewed($cm);
+
+        // Trigger course_module_viewed event.
+        $params = array(
+            'context' => $context,
+            'objectid' => $resource->id
+        );
+
+        $event = \mod_resource\event\course_module_viewed::create($params);
+        $event->add_record_snapshot('course_modules', $cm);
+        $event->add_record_snapshot('course', $course);
+        $event->add_record_snapshot('resource', $resource);
+        $event->trigger();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.0
+     */
+    public static function mod_resource_view_resource_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+
 }
