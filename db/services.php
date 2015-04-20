@@ -217,6 +217,15 @@ $functions = array(
         'capabilities'  => 'mod/page:view'
     ),
 
+    'local_mobile_mod_assign_view_grading_table' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_assign_view_grading_table',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulate the view.php web interface page: trigger events, completion, etc...',
+        'type'          => 'write',
+        'capabilities'  => 'mmod/assign:view, mod/assign:viewgrades'
+    ),
+
 );
 
 $services = array(
@@ -279,6 +288,7 @@ $services = array(
             'local_mobile_mod_resource_view_resource',
             'local_mobile_mod_url_view_url',
             'local_mobile_mod_page_view_page',
+            'local_mobile_mod_assign_view_grading_table',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
