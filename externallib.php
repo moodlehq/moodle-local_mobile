@@ -3631,5 +3631,82 @@ class local_mobile_external extends external_api {
         );
     }
 
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function mod_page_view_page_parameters() {
+        return new external_function_parameters(
+            array(
+                'pageid' => new external_value(PARAM_INT, 'page instance id')
+            )
+        );
+    }
+
+    /**
+     * Simulate the page/view.php web interface page: trigger events, completion, etc...
+     *
+     * @param int $pageid the page instance id
+     * @return array of warnings and status result
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function mod_page_view_page($pageid) {
+        global $DB, $CFG;
+        require_once($CFG->dirroot . "/mod/page/lib.php");
+
+        $params = self::validate_parameters(self::mod_page_view_page_parameters(),
+                                            array(
+                                                'pageid' => $pageid
+                                            ));
+        $warnings = array();
+
+        // Request and permission validation.
+        $page = $DB->get_record('page', array('id' => $params['pageid']), 'id', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($page, 'page');
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        require_capability('mod/page:view', $context);
+
+        // Trigger course_module_viewed event.
+        $params = array(
+            'context' => $context,
+            'objectid' => $page->id
+        );
+
+        $event = \mod_page\event\course_module_viewed::create($params);
+        $event->add_record_snapshot('course_modules', $cm);
+        $event->add_record_snapshot('course', $course);
+        $event->add_record_snapshot('page', $page);
+        $event->trigger();
+
+        // Completion.
+        $completion = new completion_info($course);
+        $completion->set_module_viewed($cm);
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.0
+     */
+    public static function mod_page_view_page_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
 
 }
