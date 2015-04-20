@@ -208,6 +208,15 @@ $functions = array(
         'capabilities'  => 'mod/url:view'
     ),
 
+    'local_mobile_mod_page_view_page' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_page_view_page',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulate the view.php web interface page: trigger events, completion, etc...',
+        'type'          => 'write',
+        'capabilities'  => 'mod/page:view'
+    ),
+
 );
 
 $services = array(
@@ -269,6 +278,7 @@ $services = array(
             'local_mobile_mod_forum_view_forum_discussion',
             'local_mobile_mod_resource_view_resource',
             'local_mobile_mod_url_view_url',
+            'local_mobile_mod_page_view_page',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
