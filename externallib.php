@@ -3273,7 +3273,7 @@ class local_mobile_external extends external_api {
             throw new moodle_exception('nopermissiontoviewgrades', 'error');
         }
 
-        $event = \gradereport_user\event\grade_report_viewed::create(
+        $event = \gradereport_user\event\report_viewed::create(
             array(
                 'context' => $context,
                 'courseid' => $course->id,
