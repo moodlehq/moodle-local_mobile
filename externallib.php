@@ -1908,9 +1908,14 @@ class local_mobile_external extends external_api {
             throw new moodle_exception('nopermissiontoviewgrades', 'error');
         }
 
-        // Create a report instance. We don't need the gpr second parameter.
-        $report = new grade_report_user($course->id, null, $context, $userid);
-        $report->viewed();
+        $event = \gradereport_user\event\grade_report_viewed::create(
+            array(
+                'context' => $context,
+                'courseid' => $course->id,
+                'relateduserid' => $userid,
+            )
+        );
+        $event->trigger();
 
         $result = array();
         $result['status'] = true;
