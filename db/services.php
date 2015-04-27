@@ -196,15 +196,6 @@ $functions = array(
         'capabilities'  => 'moodle/user:viewdetails',
     ),
 
-    'local_mobile_gradereport_user_view_grade_report' => array(
-        'classname' => 'local_mobile_external',
-        'methodname' => 'gradereport_user_view_grade_report',
-        'classpath' => 'local/mobile/externallib.php',
-        'description' => 'Trigger the report view event',
-        'type' => 'write',
-        'capabilities' => 'gradereport/user:view'
-    ),
-
     'local_mobile_mod_forum_view_forum' => array(
         'classname' => 'local_mobile_external',
         'methodname' => 'mod_forum_view_forum',
@@ -330,7 +321,6 @@ $services = array(
             'local_mobile_core_course_view_course',
             'local_mobile_core_user_view_user_list',
             'local_mobile_core_user_view_user_profile',
-            'local_mobile_gradereport_user_view_grade_report',
             'local_mobile_core_message_mark_message_read',
             'local_mobile_core_notes_view_notes',
             'local_mobile_mod_forum_view_forum',
