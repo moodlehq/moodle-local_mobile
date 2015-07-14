@@ -80,6 +80,15 @@ $functions = array(
         'capabilities'  => 'mod/book:read'
     ),
 
+    'local_mobile_mod_imscp_view_imscp' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_imscp_view_imscp',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulate the view.php web interface folder: trigger events, completion, etc...',
+        'type'          => 'write',
+        'capabilities'  => 'mod/imscp:view'
+    ),
+
 );
 
 $services = array(
@@ -158,6 +167,7 @@ $services = array(
             'local_mobile_mod_assign_view_grading_table',
             'local_mobile_mod_folder_view_folder',
             'local_mobile_mod_book_view_book',
+            'local_mobile_mod_imscp_view_imscp',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
