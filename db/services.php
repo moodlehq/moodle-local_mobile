@@ -71,6 +71,15 @@ $functions = array(
         'capabilities'  => 'mod/folder:view'
     ),
 
+    'local_mobile_mod_book_view_book' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_book_view_book',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulate the view.php web interface folder: trigger events, completion, etc...',
+        'type'          => 'write',
+        'capabilities'  => 'mod/book:read'
+    ),
+
 );
 
 $services = array(
@@ -148,6 +157,7 @@ $services = array(
             'local_mobile_mod_page_view_page',
             'local_mobile_mod_assign_view_grading_table',
             'local_mobile_mod_folder_view_folder',
+            'local_mobile_mod_book_view_book',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
