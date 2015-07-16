@@ -130,6 +130,47 @@ $functions = array(
         'capabilities'  => 'mod/chat:chat'
     ),
 
+    'local_mobile_mod_choice_view_choice' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_choice_view_choice',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Simulate the view.php web interface folder: trigger events, completion, etc...',
+        'type'          => 'write',
+        'capabilities'  => ''
+    ),
+
+    'local_mobile_mod_choice_get_choice_results' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_choice_get_choice_results',
+        'description'   => 'Retrieve users results for a specific choice.',
+        'type'          => 'read',
+        'capabilities'  => ''
+    ),
+
+    'local_mobile_mod_choice_get_choice_options' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_choice_get_choice_options',
+        'description'   => 'Retrieve options for a specific choice.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/choice:choose'
+    ),
+
+    'local_mobile_mod_choice_submit_choice_response' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_choice_submit_choice_response',
+        'description'   => 'Submit responses to a specific choice item.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/choice:choose'
+    ),
+
+    'local_mobile_mod_choice_get_choices_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_choice_get_choices_by_courses',
+        'description'   => 'Retrieve choice activities by courses.',
+        'type'          => 'read',
+        'capabilities'  => ''
+    ),
+
 );
 
 $services = array(
@@ -214,6 +255,11 @@ $services = array(
             'local_mobile_mod_chat_send_chat_message',
             'local_mobile_mod_chat_get_chat_latest_messages',
             'local_mobile_mod_chat_view_chat',
+            'local_mobile_mod_choice_view_choice',
+            'local_mobile_mod_choice_get_choice_results',
+            'local_mobile_mod_choice_get_choice_options',
+            'local_mobile_mod_choice_submit_choice_response',
+            'local_mobile_mod_choice_get_choices_by_courses',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
