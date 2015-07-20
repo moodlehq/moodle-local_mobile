@@ -1512,10 +1512,8 @@ class local_mobile_external extends external_api {
         $timenow = time();
         $choiceopen = true;
         $showpreview = false;
-        if ($choice->visible == 0) {
-            $warnings[4] = "Activity is hidden";
-            $choiceopen = false;
-        } else if ($choice->timeclose != 0) {
+
+        if ($choice->timeclose != 0) {
             if ($choice->timeopen > $timenow) {
                 $choiceopen = false;
                 $warnings[1] = get_string("notopenyet", "choice", userdate($choice->timeopen));
