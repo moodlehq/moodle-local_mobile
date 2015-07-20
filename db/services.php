@@ -89,6 +89,14 @@ $functions = array(
         'capabilities'  => 'mod/imscp:view'
     ),
 
+    'local_mobile_mod_chat_get_chats_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_chat_get_chats_by_courses',
+        'description'   => 'Retrieve chat activities by courses.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/chat:chat'
+    ),
+
     'local_mobile_mod_chat_login_user' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'mod_chat_login_user',
@@ -254,6 +262,7 @@ $services = array(
             'local_mobile_mod_chat_get_chat_users',
             'local_mobile_mod_chat_send_chat_message',
             'local_mobile_mod_chat_get_chat_latest_messages',
+            'local_mobile_mod_chat_get_chats_by_courses',
             'local_mobile_mod_chat_view_chat',
             'local_mobile_mod_choice_view_choice',
             'local_mobile_mod_choice_get_choice_results',
