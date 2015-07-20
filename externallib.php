@@ -1206,6 +1206,7 @@ class local_mobile_external extends external_api {
                                             $chatcontext->id, 'mod_chat', 'intro', null);
 
                 if (has_capability('mod/chat:chat', $chatcontext)) {
+                    $chatdetails['chatmethod']    = $CFG->chat_method;
                     $chatdetails['keepdays']      = $chat->keepdays;
                     $chatdetails['studentlogs']   = $chat->studentlogs;
                     $chatdetails['chattime']      = $chat->chattime;
@@ -1245,6 +1246,7 @@ class local_mobile_external extends external_api {
                             'name' => new external_value(PARAM_TEXT, 'Chat name'),
                             'intro' => new external_value(PARAM_RAW, 'The Chat intro'),
                             'introformat' => new external_format_value('intro'),
+                            'chatmethod' => new external_value(PARAM_ALPHA, 'chat method (sockets, daemon)', VALUE_OPTIONAL),
                             'keepdays' => new external_value(PARAM_INT, 'keep days', VALUE_OPTIONAL),
                             'studentlogs' => new external_value(PARAM_INT, 'student logs visible to everyone', VALUE_OPTIONAL),
                             'chattime' => new external_value(PARAM_RAW, 'chat time', VALUE_OPTIONAL),
