@@ -1370,7 +1370,7 @@ class local_mobile_external extends external_api {
         $context = context_module::instance($cm->id);
         self::validate_context($context);
 
-        if (!$choice = choice_mod_choice_get_choice($cm->instance)) {
+        if (!$choice = choice_get_choice($cm->instance)) {
              throw new moodle_exception("invalidcoursemodule", "error");
         }
 
@@ -1502,7 +1502,7 @@ class local_mobile_external extends external_api {
 
         require_capability('mod/choice:choose', $context);
 
-        if (!$choice = choice_mod_choice_get_choice($cm->instance)) {
+        if (!$choice = choice_get_choice($cm->instance)) {
              throw new invalid_response_exception(get_string("invalidcoursemodule"));
         }
         $groupmode = groups_get_activity_groupmode($cm);
@@ -1641,7 +1641,7 @@ class local_mobile_external extends external_api {
 
         require_capability('mod/choice:choose', $context);
 
-        if (!$choice = choice_mod_choice_get_choice($cm->instance)) {
+        if (!$choice = choice_get_choice($cm->instance)) {
              throw new moodle_exception("invalidcoursemodule");
         }
         $timenow = time();
@@ -1786,9 +1786,10 @@ class local_mobile_external extends external_api {
                     $choicedetails['allowupdate']  = $choice->allowupdate;
                     $choicedetails['allowmultiple']  = $choice->allowmultiple;
                     $choicedetails['limitanswers']  = $choice->limitanswers;
-                if (has_capability('moodle/course:manageactivities', $choicecontext)) {
                     $choicedetails['showunanswered']  = $choice->showunanswered;
                     $choicedetails['includeinactive']  = $choice->includeinactive;
+
+                if (has_capability('moodle/course:manageactivities', $choicecontext)) {
                     $choicedetails['timemodified']  = $choice->timemodified;
                     $choicedetails['completionsubmit']  = $choice->completionsubmit;
                     $choicedetails['section']  = $choice->section;
@@ -1824,7 +1825,8 @@ class local_mobile_external extends external_api {
                             'intro' => new external_value(PARAM_RAW, 'The Choice intro'),
                             'introformat' => new external_format_value('intro'),
                             'publish' => new external_value(PARAM_BOOL, 'Is puplished', VALUE_OPTIONAL),
-                            'showresults' => new external_value(PARAM_INT, 'ALWAYS, AFTER_ANSWER, AFTER_CLOSE', VALUE_OPTIONAL),
+                            'showresults' => new external_value(PARAM_INT, '0 never, 1 after answer, 2 after close, 3 always',
+                                                                VALUE_OPTIONAL),
                             'display' => new external_value(PARAM_BOOL, 'display (vertical, orizontal)', VALUE_OPTIONAL),
                             'allowupdate' => new external_value(PARAM_BOOL, 'allow update', VALUE_OPTIONAL),
                             'allowmultiple' => new external_value(PARAM_BOOL, 'allow multiple choices', VALUE_OPTIONAL),
