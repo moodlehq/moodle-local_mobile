@@ -1287,7 +1287,7 @@ class local_mobile_external extends external_api {
      * @throws moodle_exception
      */
     public static function mod_choice_view_choice($choiceid) {
-        global $DB, $CFG;
+        global $CFG;
 
         $params = self::validate_parameters(self::mod_choice_view_choice_parameters(),
                                             array(
@@ -1296,7 +1296,9 @@ class local_mobile_external extends external_api {
         $warnings = array();
 
         // Request and permission validation.
-        $choice = $DB->get_record('choice', array('id' => $params['choiceid']), '*', MUST_EXIST);
+        if (!$choice = choice_get_choice($params['choiceid'])) {
+            throw new moodle_exception("invalidcoursemodule", "error");
+        }
         list($course, $cm) = get_course_and_cm_from_instance($choice, 'choice');
 
         $context = context_module::instance($cm->id);
@@ -1346,33 +1348,28 @@ class local_mobile_external extends external_api {
      * @since Moodle 3.0
      */
     public static function mod_choice_get_choice_results_parameters() {
-        return new external_function_parameters (array('choiceinstanceid' => new external_value(PARAM_INT, 'choice id')));
+        return new external_function_parameters (array('choiceid' => new external_value(PARAM_INT, 'choice instance id')));
     }
     /**
      * Returns user's results for a specific choice
      * and a list of those users that did not answered yet.
      *
-     * @param int $choiceinstanceid the choice instance id
+     * @param int $choiceid the choice instance id
      * @return array of responses details
      * @since Moodle 3.0
      */
-    public static function mod_choice_get_choice_results($choiceinstanceid) {
+    public static function mod_choice_get_choice_results($choiceid) {
         global $USER;
 
-        $params = self::validate_parameters(self::mod_choice_get_choice_results_parameters(), array('choiceinstanceid' => $choiceinstanceid));
+        $params = self::validate_parameters(self::mod_choice_get_choice_results_parameters(), array('choiceid' => $choiceid));
 
-        if (! $cm = get_coursemodule_from_id('choice', $params['choiceinstanceid'])) {
-             throw new moodle_exception("invalidcoursemodule", "error");
+        if (!$choice = choice_get_choice($params['choiceid'])) {
+            throw new moodle_exception("invalidcoursemodule", "error");
         }
-
-        $course = get_course($cm->course);
+        list($course, $cm) = get_course_and_cm_from_instance($choice, 'choice');
 
         $context = context_module::instance($cm->id);
         self::validate_context($context);
-
-        if (!$choice = choice_get_choice($cm->instance)) {
-             throw new moodle_exception("invalidcoursemodule", "error");
-        }
 
         $groupmode = groups_get_activity_groupmode($cm);
         // Check if we have to include responses from inactive users.
@@ -1445,7 +1442,7 @@ class local_mobile_external extends external_api {
                 'options' => new external_multiple_structure(
                     new external_single_structure(
                         array(
-                            'id' => new external_value(PARAM_INT, 'choice id'),
+                            'id' => new external_value(PARAM_INT, 'choice instance id'),
                             'text' => new external_value(PARAM_TEXT, 'text of the choice'),
                             'maxanswer' => new external_value(PARAM_INT, 'maximum number of answers'),
                             'userresponses' => new external_multiple_structure(
@@ -1460,7 +1457,7 @@ class local_mobile_external extends external_api {
                                  )
                             ),
                             'numberofuser' => new external_value(PARAM_INT, 'number of users answers'),
-                            'percentageamount' => new external_value(PARAM_INT, 'percentage of users answers')
+                            'percentageamount' => new external_value(PARAM_FLOAT, 'percentage of users answers')
                         ), 'Options'
                     )
                 ),
@@ -1476,35 +1473,31 @@ class local_mobile_external extends external_api {
      * @since Moodle 3.0
      */
     public static function mod_choice_get_choice_options_parameters() {
-        return new external_function_parameters (array('choiceinstanceid' => new external_value(PARAM_INT, 'choice id')));
+        return new external_function_parameters (array('choiceid' => new external_value(PARAM_INT, 'choice instance id')));
     }
 
     /**
      * Returns options for a specific choice
      *
-     * @param int $choiceinstanceid the choice instance id
+     * @param int $choiceid the choice instance id
      * @return array of options details
      * @since Moodle 3.0
      */
-    public static function mod_choice_get_choice_options($choiceinstanceid) {
+    public static function mod_choice_get_choice_options($choiceid) {
         global $USER;
         $warnings = array();
-        $params = self::validate_parameters(self::mod_choice_get_choice_options_parameters(), array('choiceinstanceid' => $choiceinstanceid));
+        $params = self::validate_parameters(self::mod_choice_get_choice_options_parameters(), array('choiceid' => $choiceid));
 
-        if (! $cm = get_coursemodule_from_id('choice', $params['choiceinstanceid'])) {
-             throw new invalid_response_exception(get_string("invalidcoursemodule"));
+        if (!$choice = choice_get_choice($params['choiceid'])) {
+            throw new moodle_exception("invalidcoursemodule", "error");
         }
-
-        $course = get_course($cm->course);
+        list($course, $cm) = get_course_and_cm_from_instance($choice, 'choice');
 
         $context = context_module::instance($cm->id);
         self::validate_context($context);
 
         require_capability('mod/choice:choose', $context);
 
-        if (!$choice = choice_get_choice($cm->instance)) {
-             throw new invalid_response_exception(get_string("invalidcoursemodule"));
-        }
         $groupmode = groups_get_activity_groupmode($cm);
         $onlyactive = $choice->includeinactive ? false : true;
         $allresponses = choice_get_response_data($choice, $cm, $groupmode, $onlyactive);
@@ -1604,7 +1597,7 @@ class local_mobile_external extends external_api {
     public static function mod_choice_submit_choice_response_parameters() {
         return new external_function_parameters (
                        array(
-                           'choiceinstanceid' => new external_value(PARAM_INT, 'choice id'),
+                           'choiceid' => new external_value(PARAM_INT, 'choice instance id'),
                            'responses' => new external_multiple_structure(
                                new external_value(PARAM_INT, 'answer id'),
                                'Array of response ids'
@@ -1616,32 +1609,29 @@ class local_mobile_external extends external_api {
     /**
      * Submit choice responses
      *
-     * @param int $choiceinstanceid the choice instance id
+     * @param int $choiceid the choice instance id
      * @param array $responses ids
      * @return array $answers ids
      * @since Moodle 3.0
      */
-    public static function mod_choice_submit_choice_response($choiceinstanceid, $responses) {
+    public static function mod_choice_submit_choice_response($choiceid, $responses) {
         global $USER;
+
         $warnings = array();
         $params = self::validate_parameters(self::mod_choice_submit_choice_response_parameters(), array(
-                                                                                         'choiceinstanceid' => $choiceinstanceid,
+                                                                                         'choiceid' => $choiceid,
                                                                                          'responses' => $responses
                                                                                         ));
-        if (! $cm = get_coursemodule_from_id('choice', $params['choiceinstanceid'])) {
-             throw new invalid_response_exception(get_string("invalidcoursemodule"));
+        if (!$choice = choice_get_choice($params['choiceid'])) {
+            throw new moodle_exception("invalidcoursemodule", "error");
         }
-
-        $course = get_course($cm->course);
+        list($course, $cm) = get_course_and_cm_from_instance($choice, 'choice');
 
         $context = context_module::instance($cm->id);
         self::validate_context($context);
 
         require_capability('mod/choice:choose', $context);
 
-        if (!$choice = choice_get_choice($cm->instance)) {
-             throw new moodle_exception("invalidcoursemodule");
-        }
         $timenow = time();
         if ($choice->timeclose != 0) {
             if ($choice->timeopen > $timenow) {
@@ -1816,7 +1806,7 @@ class local_mobile_external extends external_api {
                 'choices' => new external_multiple_structure(
                     new external_single_structure(
                         array(
-                            'id' => new external_value(PARAM_INT, 'Choice id'),
+                            'id' => new external_value(PARAM_INT, 'choice instance id'),
                             'coursemodule' => new external_value(PARAM_INT, 'Course module id'),
                             'course' => new external_value(PARAM_TEXT, 'Course id'),
                             'name' => new external_value(PARAM_TEXT, 'Choice name'),
