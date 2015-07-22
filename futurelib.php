@@ -53,6 +53,60 @@ if (!function_exists('user_remove_user_device')) {
     }
 }
 
+if (!function_exists('get_course_and_cm_from_instance')) {
+
+    /**
+     * @since Moodle 2.8
+     */
+    function get_course_and_cm_from_instance($instanceorid, $modulename, $courseorid = 0, $userid = 0) {
+        global $DB;
+
+        // Get data from parameter.
+        if (is_object($instanceorid)) {
+            $instanceid = $instanceorid->id;
+            if (isset($instanceorid->course)) {
+                $courseid = (int)$instanceorid->course;
+            } else {
+                $courseid = 0;
+            }
+        } else {
+            $instanceid = (int)$instanceorid;
+            $courseid = 0;
+        }
+
+        // Get course from last parameter if supplied.
+        $course = null;
+        if (is_object($courseorid)) {
+            $course = $courseorid;
+        } else if ($courseorid) {
+            $courseid = (int)$courseorid;
+        }
+
+        if (!$course) {
+            if ($courseid) {
+                // If course ID is known, get it using normal function.
+                $course = get_course($courseid);
+            } else {
+                // Get course record in a single query based on instance id.
+                $pagetable = '{' . $modulename . '}';
+                $course = $DB->get_record_sql("
+                        SELECT c.*
+                          FROM $pagetable instance
+                          JOIN {course} c ON c.id = instance.course
+                         WHERE instance.id = ?", array($instanceid), MUST_EXIST);
+            }
+        }
+
+        // Get cm from get_fast_modinfo.
+        $modinfo = get_fast_modinfo($course, $userid);
+        $instances = $modinfo->get_instances_of($modulename);
+        if (!array_key_exists($instanceid, $instances)) {
+            throw new moodle_exception('invalidmoduleid', 'error', $instanceid);
+        }
+        return array($course, $instances[$instanceid]);
+    }
+}
+
 require_once($CFG->dirroot . '/mod/chat/lib.php');
 require_once($CFG->dirroot . '/mod/choice/lib.php');
 
