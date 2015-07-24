@@ -4510,7 +4510,7 @@ class local_mobile_external extends external_api {
             }
 
             $options[] = array('id'               => $optionid,
-                               'text'             => $option->text,
+                               'text'             => format_string($option->text),
                                'maxanswer'        => $option->maxanswer,
                                'userresponses'    => $userresponses,
                                'numberofuser'     => $numberofuser,
@@ -4536,7 +4536,7 @@ class local_mobile_external extends external_api {
                     new external_single_structure(
                         array(
                             'id' => new external_value(PARAM_INT, 'choice instance id'),
-                            'text' => new external_value(PARAM_TEXT, 'text of the choice'),
+                            'text' => new external_value(PARAM_RAW, 'text of the choice'),
                             'maxanswer' => new external_value(PARAM_INT, 'maximum number of answers'),
                             'userresponses' => new external_multiple_structure(
                                  new external_single_structure(
