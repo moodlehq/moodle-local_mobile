@@ -4462,4 +4462,196 @@ class local_mobile_external extends external_api {
         );
     }
 
+    /**
+     * Describes the parameters for mark_course_self_completed.
+     *
+     * @return external_external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function core_completion_mark_course_self_completed_parameters() {
+        return new external_function_parameters (
+            array(
+                'courseid' => new external_value(PARAM_INT, 'Course ID')
+            )
+        );
+    }
+
+    /**
+     * Update the course completion status for the current user (if course self-completion is enabled).
+     *
+     * @param  int $courseid    Course id
+     * @return array            Result and possible warnings
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function core_completion_mark_course_self_completed($courseid) {
+        global $USER, $CFG;
+        require_once("$CFG->libdir/completionlib.php");
+
+        $warnings = array();
+        $params = self::validate_parameters(self::core_completion_mark_course_self_completed_parameters(),
+                                            array('courseid' => $courseid));
+
+        $course = get_course($params['courseid']);
+        $context = context_course::instance($course->id);
+        self::validate_context($context);
+
+        // Set up completion object and check it is enabled.
+        $completion = new completion_info($course);
+        if (!$completion->is_enabled()) {
+            throw new moodle_exception('completionnotenabled', 'completion');
+        }
+
+        if (!$completion->is_tracked_user($USER->id)) {
+            throw new moodle_exception('nottracked', 'completion');
+        }
+
+        $completion = $completion->get_completion($USER->id, COMPLETION_CRITERIA_TYPE_SELF);
+
+        // Self completion criteria not enabled.
+        if (!$completion) {
+            throw new moodle_exception('noselfcompletioncriteria', 'completion');
+        }
+
+        // Check if the user has already marked himself as complete.
+        if ($completion->is_complete()) {
+            throw new moodle_exception('useralreadymarkedcomplete', 'completion');
+        }
+
+        // Mark the course complete.
+        $completion->mark_complete();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the mark_course_self_completed return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.0
+     */
+    public static function core_completion_mark_course_self_completed_returns() {
+
+        return new external_single_structure(
+            array(
+                'status'    => new external_value(PARAM_BOOL, 'status, true if success'),
+                'warnings'  => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for delete_choice_responses.
+     *
+     * @return external_external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function mod_choice_delete_choice_responses_parameters() {
+        return new external_function_parameters (
+            array(
+                'choiceid' => new external_value(PARAM_INT, 'choice instance id'),
+                'responses' => new external_multiple_structure(
+                    new external_value(PARAM_INT, 'response id'),
+                    'Array of response ids, empty for deleting all the user responses',
+                    VALUE_DEFAULT,
+                    array()
+                ),
+            )
+        );
+    }
+
+    /**
+     * Delete the given submitted responses in a choice
+     *
+     * @param int $choiceid the choice instance id
+     * @param array $responses the response ids,  empty for deleting all the user responses
+     * @return array status information and warnings
+     * @throws moodle_exception
+     * @since Moodle 3.0
+     */
+    public static function mod_choice_delete_choice_responses($choiceid, $responses = array()) {
+
+        $status = false;
+        $warnings = array();
+        $params = self::validate_parameters(self::mod_choice_delete_choice_responses_parameters(),
+                                            array(
+                                                'choiceid' => $choiceid,
+                                                'responses' => $responses
+                                            ));
+
+        if (!$choice = choice_get_choice($params['choiceid'])) {
+            throw new moodle_exception("invalidcoursemodule", "error");
+        }
+        list($course, $cm) = get_course_and_cm_from_instance($choice, 'choice');
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        require_capability('mod/choice:choose', $context);
+
+        // If we have the capability, delete all the passed responses.
+        if (has_capability('mod/choice:deleteresponses', $context)) {
+            if (empty($params['responses'])) {
+                $params['responses'] = array_keys(choice_get_my_response($choice));
+            }
+            $status = choice_delete_responses($params['responses'], $choice, $cm, $course);
+        } else if ($choice->allowupdate) {
+            // Check if we can delate our own responses.
+            $timenow = time();
+            if ($choice->timeclose != 0) {
+                if ($timenow > $choice->timeclose) {
+                    throw new moodle_exception("expired", "choice", '', userdate($choice->timeclose));
+                }
+            }
+            // Delete only our responses.
+            $myresponses = array_keys(choice_get_my_response($choice));
+
+            if (empty($params['responses'])) {
+                $todelete = $myresponses;
+            } else {
+                $todelete = array();
+                foreach ($params['responses'] as $response) {
+                    if (!in_array($response, $myresponses)) {
+                        $warnings[] = array(
+                            'item' => 'response',
+                            'itemid' => $response,
+                            'warningcode' => 'nopermissions',
+                            'message' => 'No permission to delete this response'
+                        );
+                    } else {
+                        $todelete[] = $response;
+                    }
+                }
+            }
+
+            $status = choice_delete_responses($todelete, $choice, $cm, $course);
+        } else {
+            // The user requires the capability to delete responses.
+            throw new required_capability_exception($context, 'mod/choice:deleteresponses', 'nopermissions', '');
+        }
+
+        return array(
+            'status' => $status,
+            'warnings' => $warnings
+        );
+    }
+
+    /**
+     * Describes the delete_choice_responses return value.
+     *
+     * @return external_multiple_structure
+     * @since Moodle 3.0
+     */
+    public static function mod_choice_delete_choice_responses_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status, true if everything went right'),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
 }
