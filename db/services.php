@@ -186,6 +186,14 @@ $functions = array(
         'type'        => 'write',
     ),
 
+    'local_mobile_mod_choice_delete_choice_responses' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'mod_choice_delete_choice_responses',
+        'description' => 'Delete the given submitted responses in a choice',
+        'type'        => 'write',
+        'capabilities'  => 'mod/choice:choose'
+    ),
+
 );
 
 $services = array(
@@ -277,6 +285,7 @@ $services = array(
             'local_mobile_mod_choice_submit_choice_response',
             'local_mobile_mod_choice_get_choices_by_courses',
             'local_mobile_core_completion_mark_course_self_completed',
+            'local_mobile_mod_choice_delete_choice_responses',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
