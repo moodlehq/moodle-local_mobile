@@ -1839,6 +1839,635 @@ class local_mobile_external extends external_api {
     }
 
     /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function mod_forum_add_discussion_post_parameters() {
+        return new external_function_parameters(
+            array(
+                'postid' => new external_value(PARAM_INT, 'the post id we are going to reply to
+                                                (can be the initial discussion post'),
+                'subject' => new external_value(PARAM_TEXT, 'new post subject'),
+                'message' => new external_value(PARAM_RAW, 'new post message (only html format allowed)'),
+                'options' => new external_multiple_structure (
+                    new external_single_structure(
+                        array(
+                            'name' => new external_value(PARAM_ALPHANUM,
+                                        'The allowed keys (value format) are:
+                                        discussionsubscribe (bool); subscribe to the discussion?, default to true
+                            '),
+                            'value' => new external_value(PARAM_RAW, 'the value of the option,
+                                                            this param is validated in the external function.'
+                        )
+                    )
+                ), 'Options', VALUE_DEFAULT, array())
+            )
+        );
+    }
+
+    /**
+     * Create new posts into an existing discussion.
+     *
+     * @param int $postid the post id we are going to reply to
+     * @param string $subject new post subject
+     * @param string $message new post message (only html format allowed)
+     * @param array $options optional settings
+     * @return array of warnings and the new post id
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function mod_forum_add_discussion_post($postid, $subject, $message, $options = array()) {
+        global $DB, $CFG, $USER;
+        require_once($CFG->dirroot . "/mod/forum/lib.php");
+
+        $params = self::validate_parameters(self::mod_forum_add_discussion_post_parameters(),
+                                            array(
+                                                'postid' => $postid,
+                                                'subject' => $subject,
+                                                'message' => $message,
+                                                'options' => $options
+                                            ));
+        // Validate options.
+        $options = array(
+            'discussionsubscribe' => true
+        );
+        foreach ($params['options'] as $option) {
+            $name = trim($option['name']);
+            switch ($name) {
+                case 'discussionsubscribe':
+                    $value = clean_param($option['value'], PARAM_BOOL);
+                    break;
+                default:
+                    throw new moodle_exception('errorinvalidparam', 'webservice', '', $name);
+            }
+            $options[$name] = $value;
+        }
+
+        $warnings = array();
+
+        if (! $parent = forum_get_post_full($params['postid'])) {
+            throw new moodle_exception('invalidparentpostid', 'forum');
+        }
+
+        if (! $discussion = $DB->get_record("forum_discussions", array("id" => $parent->discussion))) {
+            throw new moodle_exception('notpartofdiscussion', 'forum');
+        }
+
+        // Request and permission validation.
+        $forum = $DB->get_record('forum', array('id' => $discussion->forum), '*', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($forum, 'forum');
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        if (!forum_user_can_post($forum, $discussion, $USER, $cm, $course, $context)) {
+            throw new moodle_exception('nopostforum', 'forum');
+        }
+
+        $thresholdwarning = forum_check_throttling($forum, $cm);
+        forum_check_blocking_threshold($thresholdwarning);
+
+        // Create the post.
+        $post = new stdClass();
+        $post->discussion = $discussion->id;
+        $post->parent = $parent->id;
+        $post->subject = $params['subject'];
+        $post->message = $params['message'];
+        $post->messageformat = FORMAT_HTML;   // Force formatting for now.
+        $post->messagetrust = trusttext_trusted($context);
+        $post->itemid = 0;
+
+        if ($postid = forum_add_new_post($post, null)) {
+
+            $post->id = $postid;
+
+            // Trigger events and completion.
+            $params = array(
+                'context' => $context,
+                'objectid' => $post->id,
+                'other' => array(
+                    'discussionid' => $discussion->id,
+                    'forumid' => $forum->id,
+                    'forumtype' => $forum->type,
+                )
+            );
+            $event = \mod_forum\event\post_created::create($params);
+            $event->add_record_snapshot('forum_posts', $post);
+            $event->add_record_snapshot('forum_discussions', $discussion);
+            $event->trigger();
+
+            // Update completion state.
+            $completion = new completion_info($course);
+            if ($completion->is_enabled($cm) &&
+                    ($forum->completionreplies || $forum->completionposts)) {
+                $completion->update_state($cm, COMPLETION_COMPLETE);
+            }
+
+            $settings = new stdClass();
+            $settings->discussionsubscribe = $options['discussionsubscribe'];
+            forum_post_subscription($settings, $forum, $discussion);
+        } else {
+            throw new moodle_exception('couldnotadd', 'forum');
+        }
+
+        $result = array();
+        $result['postid'] = $postid;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.0
+     */
+    public static function mod_forum_add_discussion_post_returns() {
+        return new external_single_structure(
+            array(
+                'postid' => new external_value(PARAM_INT, 'new post id'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function mod_forum_add_discussion_parameters() {
+        return new external_function_parameters(
+            array(
+                'forumid' => new external_value(PARAM_INT, 'forum instance id'),
+                'subject' => new external_value(PARAM_TEXT, 'new discussion subject'),
+                'message' => new external_value(PARAM_RAW, 'new discussion message (only html format allowed)'),
+                'groupid' => new external_value(PARAM_INT, 'the user course group, default to 0', VALUE_DEFAULT, -1),
+                'options' => new external_multiple_structure (
+                    new external_single_structure(
+                        array(
+                            'name' => new external_value(PARAM_ALPHANUM,
+                                        'The allowed keys (value format) are:
+                                        discussionsubscribe (bool); subscribe to the discussion?, default to true
+                            '),
+                            'value' => new external_value(PARAM_RAW, 'the value of the option,
+                                                            this param is validated in the external function.'
+                        )
+                    )
+                ), 'Options', VALUE_DEFAULT, array())
+            )
+        );
+    }
+
+    /**
+     * Add a new discussion into an existing forum.
+     *
+     * @param int $forumid the forum instance id
+     * @param string $subject new discussion subject
+     * @param string $message new discussion message (only html format allowed)
+     * @param int $groupid the user course group
+     * @param array $options optional settings
+     * @return array of warnings and the new discussion id
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function mod_forum_add_discussion($forumid, $subject, $message, $groupid = -1, $options = array()) {
+        global $DB, $CFG;
+        require_once($CFG->dirroot . "/mod/forum/lib.php");
+
+        $params = self::validate_parameters(self::mod_forum_add_discussion_parameters(),
+                                            array(
+                                                'forumid' => $forumid,
+                                                'subject' => $subject,
+                                                'message' => $message,
+                                                'groupid' => $groupid,
+                                                'options' => $options
+                                            ));
+        // Validate options.
+        $options = array(
+            'discussionsubscribe' => true
+        );
+        foreach ($params['options'] as $option) {
+            $name = trim($option['name']);
+            switch ($name) {
+                case 'discussionsubscribe':
+                    $value = clean_param($option['value'], PARAM_BOOL);
+                    break;
+                default:
+                    throw new moodle_exception('errorinvalidparam', 'webservice', '', $name);
+            }
+            $options[$name] = $value;
+        }
+
+        $warnings = array();
+
+        // Request and permission validation.
+        $forum = $DB->get_record('forum', array('id' => $params['forumid']), '*', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($forum, 'forum');
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // Normalize group.
+        if (!groups_get_activity_groupmode($cm)) {
+            // Groups not supported, force to -1.
+            $groupid = -1;
+        } else {
+            // Check if we receive the default or and empty value for groupid,
+            // in this case, get the group for the user in the activity.
+            if ($groupid === -1 or empty($params['groupid'])) {
+                $groupid = groups_get_activity_group($cm);
+            } else {
+                // Here we rely in the group passed, forum_user_can_post_discussion will validate the group.
+                $groupid = $params['groupid'];
+            }
+        }
+
+        if (!forum_user_can_post_discussion($forum, $groupid, -1, $cm, $context)) {
+            throw new moodle_exception('cannotcreatediscussion', 'forum');
+        }
+
+        $thresholdwarning = forum_check_throttling($forum, $cm);
+        forum_check_blocking_threshold($thresholdwarning);
+
+        // Create the discussion.
+        $discussion = new stdClass();
+        $discussion->course = $course->id;
+        $discussion->forum = $forum->id;
+        $discussion->message = $params['message'];
+        $discussion->messageformat = FORMAT_HTML;   // Force formatting for now.
+        $discussion->messagetrust = trusttext_trusted($context);
+        $discussion->itemid = 0;
+        $discussion->groupid = $groupid;
+        $discussion->mailnow = 0;
+        $discussion->subject = $params['subject'];
+        $discussion->name = $discussion->subject;
+        $discussion->timestart = 0;
+        $discussion->timeend = 0;
+
+        if ($discussionid = forum_add_discussion($discussion)) {
+
+            $discussion->id = $discussionid;
+
+            // Trigger events and completion.
+
+            $params = array(
+                'context' => $context,
+                'objectid' => $discussion->id,
+                'other' => array(
+                    'forumid' => $forum->id,
+                )
+            );
+            $event = \mod_forum\event\discussion_created::create($params);
+            $event->add_record_snapshot('forum_discussions', $discussion);
+            $event->trigger();
+
+            $completion = new completion_info($course);
+            if ($completion->is_enabled($cm) &&
+                    ($forum->completiondiscussions || $forum->completionposts)) {
+                $completion->update_state($cm, COMPLETION_COMPLETE);
+            }
+
+            $settings = new stdClass();
+            $settings->discussionsubscribe = $options['discussionsubscribe'];
+            forum_post_subscription($settings, $forum, $discussion);
+        } else {
+            throw new moodle_exception('couldnotadd', 'forum');
+        }
+
+        $result = array();
+        $result['discussionid'] = $discussionid;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.0
+     */
+    public static function mod_forum_add_discussion_returns() {
+        return new external_single_structure(
+            array(
+                'discussionid' => new external_value(PARAM_INT, 'new discussion id'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_forum.
+     *
+     * @return external_external_function_parameters
+     * @since Moodle 2.5
+     */
+    public static function mod_forum_get_forums_by_courses_parameters() {
+        return new external_function_parameters (
+            array(
+                'courseids' => new external_multiple_structure(new external_value(PARAM_INT, 'course ID',
+                        '', VALUE_REQUIRED, '', NULL_NOT_ALLOWED), 'Array of Course IDs', VALUE_DEFAULT, array()),
+            )
+        );
+    }
+
+    /**
+     * Returns a list of forums in a provided list of courses,
+     * if no list is provided all forums that the user can view
+     * will be returned.
+     *
+     * @param array $courseids the course ids
+     * @return array the forum details
+     * @since Moodle 2.5
+     */
+    public static function mod_forum_get_forums_by_courses($courseids = array()) {
+        global $CFG;
+
+        require_once($CFG->dirroot . "/mod/forum/lib.php");
+
+        $params = self::validate_parameters(self::mod_forum_get_forums_by_courses_parameters(), array('courseids' => $courseids));
+
+        if (empty($params['courseids'])) {
+            $params['courseids'] = array_keys(enrol_get_my_courses());
+        }
+
+        // Array to store the forums to return.
+        $arrforums = array();
+        $warnings = array();
+
+        // Ensure there are courseids to loop through.
+        if (!empty($params['courseids'])) {
+
+            list($courses, $warnings) = external_util::validate_courses($params['courseids']);
+
+            // Get the forums in this course. This function checks users visibility permissions.
+            $forums = get_all_instances_in_courses("forum", $courses);
+            foreach ($forums as $forum) {
+
+                $course = $courses[$forum->course];
+                $cm = get_coursemodule_from_instance('forum', $forum->id, $course->id);
+                $context = context_module::instance($cm->id);
+
+                // Skip forums we are not allowed to see discussions.
+                if (!has_capability('mod/forum:viewdiscussion', $context)) {
+                    continue;
+                }
+
+                // Format the intro before being returning using the format setting.
+                list($forum->intro, $forum->introformat) = external_format_text($forum->intro, $forum->introformat,
+                                                                                $context->id, 'mod_forum', 'intro', 0);
+                // Discussions count. This function does static request cache.
+                $forum->numdiscussions = forum_count_discussions($forum, $cm, $course);
+                $forum->cmid = $forum->coursemodule;
+                $forum->cancreatediscussions = forum_user_can_post_discussion($forum, null, -1, $cm, $context);
+
+                // Add the forum to the array to return.
+                $arrforums[$forum->id] = $forum;
+            }
+        }
+
+        return $arrforums;
+    }
+
+    /**
+     * Describes the get_forum return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 2.5
+     */
+     public static function mod_forum_get_forums_by_courses_returns() {
+        return new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'id' => new external_value(PARAM_INT, 'Forum id'),
+                    'course' => new external_value(PARAM_TEXT, 'Course id'),
+                    'type' => new external_value(PARAM_TEXT, 'The forum type'),
+                    'name' => new external_value(PARAM_TEXT, 'Forum name'),
+                    'intro' => new external_value(PARAM_RAW, 'The forum intro'),
+                    'introformat' => new external_format_value('intro'),
+                    'assessed' => new external_value(PARAM_INT, 'Aggregate type'),
+                    'assesstimestart' => new external_value(PARAM_INT, 'Assess start time'),
+                    'assesstimefinish' => new external_value(PARAM_INT, 'Assess finish time'),
+                    'scale' => new external_value(PARAM_INT, 'Scale'),
+                    'maxbytes' => new external_value(PARAM_INT, 'Maximum attachment size'),
+                    'maxattachments' => new external_value(PARAM_INT, 'Maximum number of attachments'),
+                    'forcesubscribe' => new external_value(PARAM_INT, 'Force users to subscribe'),
+                    'trackingtype' => new external_value(PARAM_INT, 'Subscription mode'),
+                    'rsstype' => new external_value(PARAM_INT, 'RSS feed for this activity'),
+                    'rssarticles' => new external_value(PARAM_INT, 'Number of RSS recent articles'),
+                    'timemodified' => new external_value(PARAM_INT, 'Time modified'),
+                    'warnafter' => new external_value(PARAM_INT, 'Post threshold for warning'),
+                    'blockafter' => new external_value(PARAM_INT, 'Post threshold for blocking'),
+                    'blockperiod' => new external_value(PARAM_INT, 'Time period for blocking'),
+                    'completiondiscussions' => new external_value(PARAM_INT, 'Student must create discussions'),
+                    'completionreplies' => new external_value(PARAM_INT, 'Student must post replies'),
+                    'completionposts' => new external_value(PARAM_INT, 'Student must post discussions or replies'),
+                    'cmid' => new external_value(PARAM_INT, 'Course module id'),
+                    'numdiscussions' => new external_value(PARAM_INT, 'Number of discussions in the forum', VALUE_OPTIONAL),
+                    'cancreatediscussions' => new external_value(PARAM_BOOL, 'If the user can create discussions', VALUE_OPTIONAL),
+                ), 'forum'
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function core_group_get_activity_groupmode_parameters() {
+        return new external_function_parameters(
+            array(
+                'cmid' => new external_value(PARAM_INT, 'course module id')
+            )
+        );
+    }
+
+    /**
+     * Returns effective groupmode used in a given activity.
+     *
+     * @throws moodle_exception
+     * @param int $cmid course module id.
+     * @return array containing the group mode and possible warnings.
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function core_group_get_activity_groupmode($cmid) {
+        global $USER;
+
+        // Warnings array, it can be empty at the end but is mandatory.
+        $warnings = array();
+
+        $params = array(
+            'cmid' => $cmid
+        );
+        $params = self::validate_parameters(self::core_group_get_activity_groupmode_parameters(), $params);
+        $cmid = $params['cmid'];
+
+        $cm = get_coursemodule_from_id(null, $cmid, 0, false, MUST_EXIST);
+
+        // Security checks.
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        $groupmode = groups_get_activity_groupmode($cm);
+
+        $results = array(
+            'groupmode' => $groupmode,
+            'warnings' => $warnings
+        );
+        return $results;
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description
+     * @since Moodle 3.0
+     */
+    public static function core_group_get_activity_groupmode_returns() {
+        return new external_single_structure(
+            array(
+                'groupmode' => new external_value(PARAM_INT, 'group mode:
+                                                    0 for no groups, 1 for separate groups, 2 for visible groups'),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Create group return value description.
+     *
+     * @return external_single_structure The group description
+     */
+    public static function core_group_group_description() {
+        return new external_single_structure(
+            array(
+                'id' => new external_value(PARAM_INT, 'group record id'),
+                'name' => new external_value(PARAM_TEXT, 'multilang compatible name, course unique'),
+                'description' => new external_value(PARAM_RAW, 'group description text'),
+                'descriptionformat' => new external_format_value('description'),
+                'idnumber' => new external_value(PARAM_RAW, 'id number'),
+                'courseid' => new external_value(PARAM_INT, 'course id', VALUE_OPTIONAL),
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function core_group_get_activity_allowed_groups_parameters() {
+        return new external_function_parameters(
+            array(
+                'cmid' => new external_value(PARAM_INT, 'course module id'),
+                'userid' => new external_value(PARAM_INT, 'id of user, empty for current user', VALUE_OPTIONAL, 0)
+            )
+        );
+    }
+
+    /**
+     * Gets a list of groups that the user is allowed to access within the specified activity.
+     *
+     * @throws moodle_exception
+     * @param int $cmid course module id
+     * @param int $userid id of user.
+     * @return array of group objects (id, name, description, format) and possible warnings.
+     * @since Moodle 3.0
+     */
+    public static function core_group_get_activity_allowed_groups($cmid, $userid = 0) {
+        global $USER;
+
+        // Warnings array, it can be empty at the end but is mandatory.
+        $warnings = array();
+
+        $params = array(
+            'cmid' => $cmid,
+            'userid' => $userid
+        );
+        $params = self::validate_parameters(self::core_group_get_activity_allowed_groups_parameters(), $params);
+        $cmid = $params['cmid'];
+        $userid = $params['userid'];
+
+        $cm = get_coursemodule_from_id(null, $cmid, 0, false, MUST_EXIST);
+
+        // Security checks.
+        $context = context_module::instance($cm->id);
+        $coursecontext = context_course::instance($cm->course);
+        self::validate_context($context);
+
+        if (empty($userid)) {
+            $userid = $USER->id;
+        }
+
+        $user = core_user::get_user($userid, 'id, deleted', MUST_EXIST);
+        if ($user->deleted) {
+            throw new moodle_exception('userdeleted');
+        }
+        if (isguestuser($user)) {
+            throw new moodle_exception('invaliduserid');
+        }
+
+         // Check if we have permissions for retrieve the information.
+        if ($user->id != $USER->id) {
+            if (!has_capability('moodle/course:managegroups', $context)) {
+                throw new moodle_exception('accessdenied', 'admin');
+            }
+
+            // Validate if the user is enrolled in the course.
+            if (!is_enrolled($coursecontext, $user->id)) {
+                // We return a warning because the function does not fail for not enrolled users.
+                $warning = array();
+                $warning['item'] = 'course';
+                $warning['itemid'] = $cm->course;
+                $warning['warningcode'] = '1';
+                $warning['message'] = "User $user->id is not enrolled in course $cm->course";
+                $warnings[] = $warning;
+            }
+        }
+
+        $usergroups = array();
+        if (empty($warnings)) {
+            $groups = groups_get_activity_allowed_groups($cm, $user->id);
+
+            foreach ($groups as $group) {
+                list($group->description, $group->descriptionformat) =
+                    external_format_text($group->description, $group->descriptionformat,
+                            $coursecontext->id, 'group', 'description', $group->id);
+                $group->courseid = $cm->course;
+                $usergroups[] = $group;
+            }
+        }
+
+        $results = array(
+            'groups' => $usergroups,
+            'warnings' => $warnings
+        );
+        return $results;
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description A single structure containing groups and possible warnings.
+     * @since Moodle 3.0
+     */
+    public static function core_group_get_activity_allowed_groups_returns() {
+        return new external_single_structure(
+            array(
+                'groups' => new external_multiple_structure(self::core_group_group_description()),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
      * Describes the parameters for mark_course_self_completed.
      *
      * @return external_external_function_parameters
