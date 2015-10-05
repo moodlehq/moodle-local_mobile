@@ -49,19 +49,19 @@ if (!function_exists('chat_get_latest_messages')) {
     }
 }
 
-if (!function_exists('choice_get_my_choice_response')) {
+if (!function_exists('choice_get_my_response')) {
     /**
      * Return my responses on a specific choice.
      * @param object $choice
      * @return array
      */
-    function choice_get_my_choice_response($choice) {
+    function choice_get_my_response($choice) {
         global $DB, $USER;
         return $DB->get_records('choice_answers', array('choiceid' => $choice->id, 'userid' => $USER->id));
     }
 }
 
-if (!function_exists('choice_can_see_results')) {
+if (!function_exists('choice_can_view_results')) {
     /**
      * Return true if we are allowd to see choice results as student
      * @param object $choice Choice
@@ -69,7 +69,7 @@ if (!function_exists('choice_can_see_results')) {
      * @param bool|null $choiceopen choice open
      * @return bool True if we can see results, false if not.
      */
-    function choice_can_see_results($choice, $current = null, $choiceopen = null) {
+    function choice_can_view_results($choice, $current = null, $choiceopen = null) {
 
         if (is_null($choiceopen)) {
             $timenow = time();
@@ -80,7 +80,7 @@ if (!function_exists('choice_can_see_results')) {
             }
         }
         if (is_null($current)) {
-            $current = choice_get_my_choice_response($choice);
+            $current = choice_get_my_response($choice);
         }
 
         if ($choice->showresults == CHOICE_SHOWRESULTS_ALWAYS or
@@ -1383,20 +1383,21 @@ class local_mobile_external extends external_api {
         $results = prepare_choice_show_results($choice, $course, $cm, $users);
 
         $options = array();
+        $fullnamecap = has_capability('moodle/site:viewfullnames', $context);
         foreach ($results->options as $optionid => $option) {
 
             $userresponses = array();
             $numberofuser = 0;
             $percentageamount = 0;
             if (property_exists($option, 'user') and
-                (has_capability('mod/choice:readresponses', $context) or choice_can_see_results($choice))) {
+                (has_capability('mod/choice:readresponses', $context) or choice_can_view_results($choice))) {
                 $numberofuser = count($option->user);
                 $percentageamount = ((float)$numberofuser / (float)$results->numberofuser) * 100.0;
                 if ($choice->publish) {
                     foreach ($option->user as $userresponse) {
                         $response = array();
                         $response['userid'] = $userresponse->id;
-                        $response['fullname'] = fullname($userresponse);
+                        $response['fullname'] = fullname($userresponse, $fullnamecap);
                         $usercontext = context_user::instance($userresponse->id, IGNORE_MISSING);
                         if ($usercontext) {
                             $profileimageurl = moodle_url::make_webservice_pluginfile_url($usercontext->id, 'user', 'icon', null,
@@ -1417,17 +1418,19 @@ class local_mobile_external extends external_api {
             }
 
             $options[] = array('id'               => $optionid,
-                               'text'             => format_string($option->text),
+                               'text'             => format_string($option->text, true, array('context' => $context)),
                                'maxanswer'        => $option->maxanswer,
                                'userresponses'    => $userresponses,
                                'numberofuser'     => $numberofuser,
                                'percentageamount' => $percentageamount
                               );
         }
+
         $warnings = array();
-        return array('options' => $options,
-                     'warnings' => $warnings
-                    );
+        return array(
+            'options' => $options,
+            'warnings' => $warnings
+        );
     }
 
     /**
@@ -1529,7 +1532,7 @@ class local_mobile_external extends external_api {
             foreach ($options['options'] as $option) {
                 $optionarr = array();
                 $optionarr['id']            = $option->attributes->value;
-                $optionarr['text']          = $option->text;
+                $optionarr['text']          = format_string($option->text, true, array('context' => $context));
                 $optionarr['maxanswers']    = $option->maxanswers;
                 $optionarr['displaylayout'] = $option->displaylayout;
                 $optionarr['countanswers']  = $option->countanswers;
@@ -1548,16 +1551,16 @@ class local_mobile_external extends external_api {
             }
         }
         foreach ($warnings as $key => $message) {
-                    $warnings[$key] = array(
-                        'item' => 'choice',
-                        'itemid' => $cm->id,
-                        'warningcode' => $key,
-                        'message' => $message
-                    );
+            $warnings[$key] = array(
+                'item' => 'choice',
+                'itemid' => $cm->id,
+                'warningcode' => $key,
+                'message' => $message
+            );
         }
         return array(
-                     'options' => $optionsarray,
-                     'warnings' => $warnings
+            'options' => $optionsarray,
+            'warnings' => $warnings
         );
     }
 
@@ -1574,7 +1577,7 @@ class local_mobile_external extends external_api {
                     new external_single_structure(
                         array(
                             'id' => new external_value(PARAM_INT, 'option id'),
-                            'text' => new external_value(PARAM_TEXT, 'text of the choice'),
+                            'text' => new external_value(PARAM_RAW, 'text of the choice'),
                             'maxanswers' => new external_value(PARAM_INT, 'maximum number of answers'),
                             'displaylayout' => new external_value(PARAM_BOOL, 'true for orizontal, otherwise vertical'),
                             'countanswers' => new external_value(PARAM_INT, 'number of answers'),
@@ -1618,10 +1621,12 @@ class local_mobile_external extends external_api {
         global $USER;
 
         $warnings = array();
-        $params = self::validate_parameters(self::mod_choice_submit_choice_response_parameters(), array(
-                                                                                         'choiceid' => $choiceid,
-                                                                                         'responses' => $responses
-                                                                                        ));
+        $params = self::validate_parameters(self::mod_choice_submit_choice_response_parameters(),
+                                            array(
+                                                'choiceid' => $choiceid,
+                                                'responses' => $responses
+                                            ));
+
         if (!$choice = choice_get_choice($params['choiceid'])) {
             throw new moodle_exception("invalidcoursemodule", "error");
         }
@@ -1640,7 +1645,7 @@ class local_mobile_external extends external_api {
                 throw new moodle_exception("expired", "choice", '', userdate($choice->timeclose));
             }
         }
-        if (!choice_get_my_choice_response($choice) or $choice->allowupdate) {
+        if (!choice_get_my_response($choice) or $choice->allowupdate) {
             // When a single response is given, we convert the array to a simple variable
             // in order to avoid choice_user_submit_response to check with allowmultiple even
             // for a single response.
@@ -1651,12 +1656,12 @@ class local_mobile_external extends external_api {
         } else {
             throw new moodle_exception('missingrequiredcapability', 'webservice', '', 'allowupdate');
         }
-        $answers = choice_get_my_choice_response($choice);
+        $answers = choice_get_my_response($choice);
 
         return array(
-                     'answers' => $answers,
-                     'warnings' => $warnings
-               );
+            'answers' => $answers,
+            'warnings' => $warnings
+        );
     }
 
     /**
