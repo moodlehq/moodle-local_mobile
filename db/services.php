@@ -68,6 +68,37 @@ $functions = array(
         'type'          => 'read',
         'capabilities'  => 'mod/forum:viewdiscussion, mod/forum:viewqandawithoutposting',
     ),
+    'local_mobile_mod_forum_add_discussion' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_forum_add_discussion',
+        'description'   => 'Add a new discussion into an existing forum.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/forum:startdiscussion'
+    ),
+
+    'local_mobile_mod_forum_add_discussion_post' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_forum_add_discussion_post',
+        'description'   => 'Create new posts into an existing discussion.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/forum:replypost'
+    ),
+
+    'local_mobile_core_group_get_activity_groupmode' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_group_get_activity_groupmode',
+        'description'   => 'Returns effective groupmode used in a given activity.',
+        'type'          => 'read',
+        'capabilities'  => ''
+    ),
+
+    'local_mobile_core_group_get_activity_allowed_groups' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_group_get_activity_allowed_groups',
+        'description'   => 'Gets a list of groups that the user is allowed to access within the specified activity.',
+        'type'          => 'read',
+        'capabilities'  => ''
+    ),
     'local_mobile_core_message_get_messages' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_message_get_messages',
@@ -304,6 +335,10 @@ $services = array(
             'local_mobile_mod_forum_get_forums_by_courses',
             'local_mobile_mod_forum_get_forum_discussions_paginated',
             'local_mobile_mod_forum_get_forum_discussion_posts',
+            'local_mobile_mod_forum_add_discussion',
+            'local_mobile_mod_forum_add_discussion_post',
+            'local_mobile_core_group_get_activity_groupmode',
+            'local_mobile_core_group_get_activity_allowed_groups',
             'local_mobile_core_files_get_files',
             'core_message_create_contacts',
             'core_message_delete_contacts',
