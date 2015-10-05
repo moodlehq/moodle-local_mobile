@@ -84,6 +84,37 @@ $functions = array(
         'type'          => 'read',
         'capabilities'  => 'mod/forum:viewdiscussion, mod/forum:viewqandawithoutposting',
     ),
+    'local_mobile_mod_forum_add_discussion' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_forum_add_discussion',
+        'description'   => 'Add a new discussion into an existing forum.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/forum:startdiscussion'
+    ),
+
+    'local_mobile_mod_forum_add_discussion_post' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_forum_add_discussion_post',
+        'description'   => 'Create new posts into an existing discussion.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/forum:replypost'
+    ),
+
+    'local_mobile_core_group_get_activity_groupmode' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_group_get_activity_groupmode',
+        'description'   => 'Returns effective groupmode used in a given activity.',
+        'type'          => 'read',
+        'capabilities'  => ''
+    ),
+
+    'local_mobile_core_group_get_activity_allowed_groups' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_group_get_activity_allowed_groups',
+        'description'   => 'Gets a list of groups that the user is allowed to access within the specified activity.',
+        'type'          => 'read',
+        'capabilities'  => ''
+    ),
     'local_mobile_gradereport_user_get_grades_table' => array(
         'classname'   => 'local_mobile_external',
         'methodname'  => 'gradereport_user_get_grades_table',
