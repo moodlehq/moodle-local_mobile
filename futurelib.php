@@ -203,3 +203,86 @@ if (!function_exists('choice_can_view_results')) {
         return false;
     }
 }
+
+require_once($CFG->libdir . "/modinfolib.php");
+
+if (!function_exists('get_course_and_cm_from_cmid')) {
+    /**
+     * Efficiently retrieves the $course (stdclass) and $cm (cm_info) objects, given
+     * a cmid. If module name is also provided, it will ensure the cm is of that type.
+     *
+     * Usage:
+     * list($course, $cm) = get_course_and_cm_from_cmid($cmid, 'forum');
+     *
+     * Using this method has a performance advantage because it works by loading
+     * modinfo for the course - which will then be cached and it is needed later
+     * in most requests. It also guarantees that the $cm object is a cm_info and
+     * not a stdclass.
+     *
+     * The $course object can be supplied if already known and will speed
+     * up this function - although it is more efficient to use this function to
+     * get the course if you are starting from a cmid.
+     *
+     * To avoid security problems and obscure bugs, you should always specify
+     * $modulename if the cmid value came from user input.
+     *
+     * By default this obtains information (for example, whether user can access
+     * the activity) for current user, but you can specify a userid if required.
+     *
+     * @param stdClass|int $cmorid Id of course-module, or database object
+     * @param string $modulename Optional modulename (improves security)
+     * @param stdClass|int $courseorid Optional course object if already loaded
+     * @param int $userid Optional userid (default = current)
+     * @return array Array with 2 elements $course and $cm
+     * @throws moodle_exception If the item doesn't exist or is of wrong module name
+     */
+    function get_course_and_cm_from_cmid($cmorid, $modulename = '', $courseorid = 0, $userid = 0) {
+        global $DB;
+        if (is_object($cmorid)) {
+            $cmid = $cmorid->id;
+            if (isset($cmorid->course)) {
+                $courseid = (int)$cmorid->course;
+            } else {
+                $courseid = 0;
+            }
+        } else {
+            $cmid = (int)$cmorid;
+            $courseid = 0;
+        }
+
+        // Validate module name if supplied.
+        if ($modulename && !core_component::is_valid_plugin_name('mod', $modulename)) {
+            throw new coding_exception('Invalid modulename parameter');
+        }
+
+        // Get course from last parameter if supplied.
+        $course = null;
+        if (is_object($courseorid)) {
+            $course = $courseorid;
+        } else if ($courseorid) {
+            $courseid = (int)$courseorid;
+        }
+
+        if (!$course) {
+            if ($courseid) {
+                // If course ID is known, get it using normal function.
+                $course = get_course($courseid);
+            } else {
+                // Get course record in a single query based on cmid.
+                $course = $DB->get_record_sql("
+                        SELECT c.*
+                          FROM {course_modules} cm
+                          JOIN {course} c ON c.id = cm.course
+                         WHERE cm.id = ?", array($cmid), MUST_EXIST);
+            }
+        }
+
+        // Get cm from get_fast_modinfo.
+        $modinfo = get_fast_modinfo($course, $userid);
+        $cm = $modinfo->get_cm($cmid);
+        if ($modulename && $cm->modname !== $modulename) {
+            throw new moodle_exception('invalidcoursemodule', 'error');
+        }
+        return array($course, $cm);
+    }
+}
