@@ -2553,7 +2553,8 @@ class local_mobile_external extends external_api {
         // If we have the capability, delete all the passed responses.
         if (has_capability('mod/choice:deleteresponses', $context)) {
             if (empty($params['responses'])) {
-                $params['responses'] = array_keys(choice_get_my_response($choice));
+                // Get all the responses for the choice.
+                $params['responses'] = array_keys(choice_get_all_responses($choice));
             }
             $status = choice_delete_responses($params['responses'], $choice, $cm, $course);
         } else if ($choice->allowupdate) {
