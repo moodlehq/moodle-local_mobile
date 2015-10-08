@@ -4320,22 +4320,7 @@ class local_mobile_external extends external_api {
 
             $post->id = $postid;
 
-            // Trigger events and completion.
-            $params = array(
-                'context' => $context,
-                'objectid' => $post->id,
-                'other' => array(
-                    'discussionid' => $discussion->id,
-                    'forumid' => $forum->id,
-                    'forumtype' => $forum->type,
-                )
-            );
-            $event = \mod_forum\event\post_created::create($params);
-            $event->add_record_snapshot('forum_posts', $post);
-            $event->add_record_snapshot('forum_discussions', $discussion);
-            $event->trigger();
-
-            // Update completion state.
+            // Update completion state. We don't trigger events because post_created event doesn't exist in 2.5.
             $completion = new completion_info($course);
             if ($completion->is_enabled($cm) &&
                     ($forum->completionreplies || $forum->completionposts)) {
@@ -4489,19 +4474,7 @@ class local_mobile_external extends external_api {
 
             $discussion->id = $discussionid;
 
-            // Trigger events and completion.
-
-            $params = array(
-                'context' => $context,
-                'objectid' => $discussion->id,
-                'other' => array(
-                    'forumid' => $forum->id,
-                )
-            );
-            $event = \mod_forum\event\discussion_created::create($params);
-            $event->add_record_snapshot('forum_discussions', $discussion);
-            $event->trigger();
-
+            // Update completion state. We don't trigger events because discussion_created event doesn't exist in 2.5.
             $completion = new completion_info($course);
             if ($completion->is_enabled($cm) &&
                     ($forum->completiondiscussions || $forum->completionposts)) {

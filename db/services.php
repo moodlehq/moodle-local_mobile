@@ -355,7 +355,6 @@ $services = array(
             'core_message_block_contacts',
             'core_message_unblock_contacts',
             'core_message_get_contacts',
-            'core_message_search_contacts',
             'local_mobile_core_message_search_contacts',
             'local_mobile_gradereport_user_get_grades_table',
             'local_mobile_core_message_get_blocked_users',
