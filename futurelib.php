@@ -145,6 +145,20 @@ if (!function_exists('choice_get_my_response')) {
     }
 }
 
+if (!function_exists('choice_get_all_responses')) {
+    /**
+     * Get all the responses on a given choice.
+     *
+     * @param stdClass $choice Choice record
+     * @return array of choice answers records
+     * @since  Moodle 3.0
+     */
+    function choice_get_all_responses($choice) {
+        global $DB;
+        return $DB->get_records('choice_answers', array('choiceid' => $choice->id));
+    }
+}
+
 if (!function_exists('choice_can_view_results')) {
     /**
      * Return true if we are allowd to see choice results as student
