@@ -105,3 +105,82 @@ if (!function_exists('choice_can_view_results')) {
         return false;
     }
 }
+
+// In Moodle 3.0, lti_view function is renamed to lti_launch_tool and a new lti_view function is created.
+// In here we'll rename this new lti_view function to mod_lti_view to prevent problems with the existing one.
+
+/**
+ * Mark the activity completed (if required) and trigger the course_module_viewed event.
+ *
+ * @param  stdClass $lti        lti object
+ * @param  stdClass $course     course object
+ * @param  stdClass $cm         course module object
+ * @param  stdClass $context    context object
+ * @since Moodle 3.0
+ */
+function mod_lti_view($lti, $course, $cm, $context) {
+
+    // Trigger course_module_viewed event.
+    $params = array(
+        'context' => $context,
+        'objectid' => $lti->id
+    );
+
+    $event = \mod_lti\event\course_module_viewed::create($params);
+    $event->add_record_snapshot('course_modules', $cm);
+    $event->add_record_snapshot('course', $course);
+    $event->add_record_snapshot('lti', $lti);
+    $event->trigger();
+
+    // Completion.
+    $completion = new completion_info($course);
+    $completion->set_module_viewed($cm);
+}
+
+require_once($CFG->dirroot . "/lib/externallib.php");
+
+if (!class_exists("external_util")) {
+
+    /**
+     * Utility functions for the external API.
+     *
+     * @package    core_webservice
+     * @copyright  2015 Juan Leyva
+     * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+     * @since Moodle 3.0
+     */
+    class external_util {
+
+        /**
+         * Validate a list of courses, returning the complete course objects for valid courses.
+         *
+         * @param  array $courseids A list of course ids
+         * @return array            An array of courses and the validation warnings
+         */
+        public static function validate_courses($courseids) {
+            // Delete duplicates.
+            $courseids = array_unique($courseids);
+            $courses = array();
+            $warnings = array();
+
+            foreach ($courseids as $cid) {
+                // Check the user can function in this context.
+                try {
+                    $context = context_course::instance($cid);
+                    external_api::validate_context($context);
+                    $courses[$cid] = get_course($cid);
+                } catch (Exception $e) {
+                    $warnings[] = array(
+                        'item' => 'course',
+                        'itemid' => $cid,
+                        'warningcode' => '1',
+                        'message' => 'No access rights in course context'
+                    );
+                }
+            }
+
+            return array($courses, $warnings);
+        }
+
+    }
+}
