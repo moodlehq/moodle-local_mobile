@@ -364,6 +364,7 @@ $services = array(
             'core_message_send_instant_messages',
             'core_enrol_get_enrolled_users',
             'core_user_get_course_user_profiles',
+            'core_user_get_users_by_field',
             'moodle_enrol_get_users_courses',
             'moodle_enrol_get_enrolled_users',
             'moodle_user_get_users_by_id',
