@@ -292,6 +292,25 @@ $functions = array(
         'capabilities'  => ''
     ),
 
+    'local_mobile_mod_lti_get_tool_launch_data' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_lti_get_tool_launch_data',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Return the launch data for a given external tool.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lti:view'
+    ),
+
+    'local_mobile_mod_lti_get_ltis_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_lti_get_ltis_by_courses',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns a list of external tool instances in a provided set of courses, if
+                            no courses are provided then all the external tool instances the user has access to will be returned.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lti:view'
+    ),
+
     'local_mobile_core_completion_mark_course_self_completed' => array(
         'classname'   => 'local_mobile_external',
         'methodname'  => 'core_completion_mark_course_self_completed',
@@ -367,6 +386,8 @@ $services = array(
             'local_mobile_mod_choice_get_choice_options',
             'local_mobile_mod_choice_submit_choice_response',
             'local_mobile_mod_choice_get_choices_by_courses',
+            'local_mobile_mod_lti_get_tool_launch_data',
+            'local_mobile_mod_lti_get_ltis_by_courses',
             'local_mobile_core_completion_mark_course_self_completed',
             'local_mobile_mod_choice_delete_choice_responses',
         ),
