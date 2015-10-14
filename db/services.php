@@ -507,6 +507,7 @@ $services = array(
             'local_mobile_core_message_get_messages',
             'core_calendar_get_calendar_events',
             'core_user_add_user_device',
+            'core_user_get_users_by_field',
             'local_mobile_core_grades_get_grades',
             'message_airnotifier_is_system_configured',
             'message_airnotifier_are_notification_preferences_configured',
