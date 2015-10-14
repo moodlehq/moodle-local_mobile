@@ -367,6 +367,34 @@ $functions = array(
         'capabilities'  => ''
     ),
 
+    'local_mobile_mod_lti_get_tool_launch_data' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_lti_get_tool_launch_data',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Return the launch data for a given external tool.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lti:view'
+    ),
+
+    'local_mobile_mod_lti_get_ltis_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_lti_get_ltis_by_courses',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns a list of external tool instances in a provided set of courses, if
+                            no courses are provided then all the external tool instances the user has access to will be returned.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/lti:view'
+    ),
+
+    'local_mobile_mod_lti_view_lti' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_lti_view_lti',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Trigger the course module viewed event and update the module completion status.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/lti:view'
+    ),
+
     'local_mobile_core_completion_mark_course_self_completed' => array(
         'classname'   => 'local_mobile_external',
         'methodname'  => 'core_completion_mark_course_self_completed',
@@ -461,6 +489,9 @@ $services = array(
             'local_mobile_mod_forum_get_forums_by_courses',
             'local_mobile_core_group_get_activity_groupmode',
             'local_mobile_core_group_get_activity_allowed_groups',
+            'local_mobile_mod_lti_get_tool_launch_data',
+            'local_mobile_mod_lti_get_ltis_by_courses',
+            'local_mobile_mod_lti_view_lti',
             'local_mobile_core_completion_mark_course_self_completed',
             'local_mobile_mod_choice_delete_choice_responses',
         ),
