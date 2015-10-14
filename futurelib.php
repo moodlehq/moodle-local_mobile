@@ -106,6 +106,263 @@ if (!function_exists('choice_can_view_results')) {
     }
 }
 
+require_once($CFG->libdir . '/externallib.php');
+if (!class_exists("external_util")) {
+
+    /**
+     * Utility functions for the external API.
+     *
+     * @package    core_webservice
+     * @copyright  2015 Juan Leyva
+     * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+     * @since Moodle 3.0
+     */
+    class external_util extends external_api{
+
+        /**
+         * Validate a list of courses, returning the complete course objects for valid courses.
+         *
+         * @param  array $courseids A list of course ids
+         * @return array            An array of courses and the validation warnings
+         */
+        public static function validate_courses($courseids) {
+            // Delete duplicates.
+            $courseids = array_unique($courseids);
+            $courses = array();
+            $warnings = array();
+
+            foreach ($courseids as $cid) {
+                // Check the user can function in this context.
+                try {
+                    $context = context_course::instance($cid);
+                    self::validate_context($context);
+                    $courses[$cid] = get_course($cid);
+                } catch (Exception $e) {
+                    $warnings[] = array(
+                        'item' => 'course',
+                        'itemid' => $cid,
+                        'warningcode' => '1',
+                        'message' => 'No access rights in course context'
+                    );
+                }
+            }
+
+            return array($courses, $warnings);
+        }
+
+    }
+}
+
+if (!function_exists('external_format_string')) {
+    /**
+     * Format the string to be returned properly as requested by the either the web service server,
+     * either by an internally call.
+     * The caller can change the format (raw) with the external_settings singleton
+     * All web service servers must set this singleton when parsing the $_GET and $_POST.
+     *
+     * @param string $str The string to be filtered. Should be plain text, expect
+     * possibly for multilang tags.
+     * @param boolean $striplinks To strip any link in the result text. Moodle 1.8 default changed from false to true! MDL-8713
+     * @param int $contextid The id of the context for the string (affects filters).
+     * @param array $options options array/object or courseid
+     * @return string text
+     * @since Moodle 3.0
+     */
+    function external_format_string($str, $contextid, $striplinks = true, $options = array()) {
+
+        // Get settings (singleton).
+        $settings = external_settings::get_instance();
+        if (empty($contextid)) {
+            throw new coding_exception('contextid is required');
+        }
+
+        if (!$settings->get_raw()) {
+            $context = context::instance_by_id($contextid);
+            $options['context'] = $context;
+            $options['filter'] = $settings->get_filter();
+            $str = format_string($str, $striplinks, $options);
+        }
+
+        return $str;
+    }
+}
+
+require_once($CFG->dirroot . '/mod/lti/locallib.php');
+
+if (!function_exists('lti_get_launch_data')) {
+    /**
+     * Return the launch data required for opening the external tool.
+     *
+     * @param  stdClass $instance the external tool activity settings
+     * @return array the endpoint URL and parameters (including the signature)
+     * @since  Moodle 3.0
+     */
+    function lti_get_launch_data($instance) {
+        global $PAGE, $CFG;
+
+        if (empty($instance->typeid)) {
+            $tool = lti_get_tool_by_url_match($instance->toolurl, $instance->course);
+            if ($tool) {
+                $typeid = $tool->id;
+            } else {
+                $typeid = null;
+            }
+        } else {
+            $typeid = $instance->typeid;
+            $tool = lti_get_type($typeid);
+        }
+
+        if ($typeid) {
+            $typeconfig = lti_get_type_config($typeid);
+        } else {
+            // There is no admin configuration for this tool. Use configuration in the lti instance record plus some defaults.
+            $typeconfig = (array)$instance;
+
+            $typeconfig['sendname'] = $instance->instructorchoicesendname;
+            $typeconfig['sendemailaddr'] = $instance->instructorchoicesendemailaddr;
+            $typeconfig['customparameters'] = $instance->instructorcustomparameters;
+            $typeconfig['acceptgrades'] = $instance->instructorchoiceacceptgrades;
+            $typeconfig['allowroster'] = $instance->instructorchoiceallowroster;
+            $typeconfig['forcessl'] = '0';
+        }
+
+        // Default the organizationid if not specified.
+        if (empty($typeconfig['organizationid'])) {
+            $urlparts = parse_url($CFG->wwwroot);
+
+            $typeconfig['organizationid'] = $urlparts['host'];
+        }
+
+        if (isset($tool->toolproxyid)) {
+            $toolproxy = lti_get_tool_proxy($tool->toolproxyid);
+            $key = $toolproxy->guid;
+            $secret = $toolproxy->secret;
+        } else {
+            $toolproxy = null;
+            if (!empty($instance->resourcekey)) {
+                $key = $instance->resourcekey;
+            } else if (!empty($typeconfig['resourcekey'])) {
+                $key = $typeconfig['resourcekey'];
+            } else {
+                $key = '';
+            }
+            if (!empty($instance->password)) {
+                $secret = $instance->password;
+            } else if (!empty($typeconfig['password'])) {
+                $secret = $typeconfig['password'];
+            } else {
+                $secret = '';
+            }
+        }
+
+        $endpoint = !empty($instance->toolurl) ? $instance->toolurl : $typeconfig['toolurl'];
+        $endpoint = trim($endpoint);
+
+        // If the current request is using SSL and a secure tool URL is specified, use it.
+        if (lti_request_is_using_ssl() && !empty($instance->securetoolurl)) {
+            $endpoint = trim($instance->securetoolurl);
+        }
+
+        // If SSL is forced, use the secure tool url if specified. Otherwise, make sure https is on the normal launch URL.
+        if (isset($typeconfig['forcessl']) && ($typeconfig['forcessl'] == '1')) {
+            if (!empty($instance->securetoolurl)) {
+                $endpoint = trim($instance->securetoolurl);
+            }
+
+            $endpoint = lti_ensure_url_is_https($endpoint);
+        } else {
+            if (!strstr($endpoint, '://')) {
+                $endpoint = 'http://' . $endpoint;
+            }
+        }
+
+        $orgid = $typeconfig['organizationid'];
+
+        $course = $PAGE->course;
+        $islti2 = isset($tool->toolproxyid);
+        $allparams = lti_build_request($instance, $typeconfig, $course, $typeid, $islti2);
+        if ($islti2) {
+            $requestparams = lti_build_request_lti2($tool, $allparams);
+        } else {
+            $requestparams = $allparams;
+        }
+        $requestparams = array_merge($requestparams, lti_build_standard_request($instance, $orgid, $islti2));
+        $customstr = '';
+        if (isset($typeconfig['customparameters'])) {
+            $customstr = $typeconfig['customparameters'];
+        }
+        $requestparams = array_merge($requestparams, lti_build_custom_parameters($toolproxy, $tool, $instance, $allparams, $customstr,
+            $instance->instructorcustomparameters, $islti2));
+
+        $launchcontainer = lti_get_launch_container($instance, $typeconfig);
+        $returnurlparams = array('course' => $course->id,
+                                 'launch_container' => $launchcontainer,
+                                 'instanceid' => $instance->id,
+                                 'sesskey' => sesskey());
+
+        // Add the return URL. We send the launch container along to help us avoid frames-within-frames when the user returns.
+        $url = new \moodle_url('/mod/lti/return.php', $returnurlparams);
+        $returnurl = $url->out(false);
+
+        if (isset($typeconfig['forcessl']) && ($typeconfig['forcessl'] == '1')) {
+            $returnurl = lti_ensure_url_is_https($returnurl);
+        }
+
+        $target = '';
+        switch($launchcontainer) {
+            case LTI_LAUNCH_CONTAINER_EMBED:
+            case LTI_LAUNCH_CONTAINER_EMBED_NO_BLOCKS:
+                $target = 'iframe';
+                break;
+            case LTI_LAUNCH_CONTAINER_REPLACE_MOODLE_WINDOW:
+                $target = 'frame';
+                break;
+            case LTI_LAUNCH_CONTAINER_WINDOW:
+                $target = 'window';
+                break;
+        }
+        if (!empty($target)) {
+            $requestparams['launch_presentation_document_target'] = $target;
+        }
+
+        $requestparams['launch_presentation_return_url'] = $returnurl;
+
+        // Allow request params to be updated by sub-plugins.
+        $plugins = core_component::get_plugin_list('ltisource');
+        foreach (array_keys($plugins) as $plugin) {
+            $pluginparams = component_callback('ltisource_'.$plugin, 'before_launch',
+                array($instance, $endpoint, $requestparams), array());
+
+            if (!empty($pluginparams) && is_array($pluginparams)) {
+                $requestparams = array_merge($requestparams, $pluginparams);
+            }
+        }
+
+        if (!empty($key) && !empty($secret)) {
+            $parms = lti_sign_parameters($requestparams, $endpoint, "POST", $key, $secret);
+
+            $endpointurl = new \moodle_url($endpoint);
+            $endpointparams = $endpointurl->params();
+
+            // Strip querystring params in endpoint url from $parms to avoid duplication.
+            if (!empty($endpointparams) && !empty($parms)) {
+                foreach (array_keys($endpointparams) as $paramname) {
+                    if (isset($parms[$paramname])) {
+                        unset($parms[$paramname]);
+                    }
+                }
+            }
+
+        } else {
+            // If no key and secret, do the launch unsigned.
+            $returnurlparams['unsigned'] = '1';
+            $parms = $requestparams;
+        }
+
+        return array($endpoint, $parms);
+    }
+}
+
 // In Moodle 3.0, lti_view function is renamed to lti_launch_tool and a new lti_view function is created.
 // In here we'll rename this new lti_view function to mod_lti_view to prevent problems with the existing one.
 
@@ -135,52 +392,4 @@ function mod_lti_view($lti, $course, $cm, $context) {
     // Completion.
     $completion = new completion_info($course);
     $completion->set_module_viewed($cm);
-}
-
-require_once($CFG->dirroot . "/lib/externallib.php");
-
-if (!class_exists("external_util")) {
-
-    /**
-     * Utility functions for the external API.
-     *
-     * @package    core_webservice
-     * @copyright  2015 Juan Leyva
-     * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
-     * @since Moodle 3.0
-     */
-    class external_util {
-
-        /**
-         * Validate a list of courses, returning the complete course objects for valid courses.
-         *
-         * @param  array $courseids A list of course ids
-         * @return array            An array of courses and the validation warnings
-         */
-        public static function validate_courses($courseids) {
-            // Delete duplicates.
-            $courseids = array_unique($courseids);
-            $courses = array();
-            $warnings = array();
-
-            foreach ($courseids as $cid) {
-                // Check the user can function in this context.
-                try {
-                    $context = context_course::instance($cid);
-                    external_api::validate_context($context);
-                    $courses[$cid] = get_course($cid);
-                } catch (Exception $e) {
-                    $warnings[] = array(
-                        'item' => 'course',
-                        'itemid' => $cid,
-                        'warningcode' => '1',
-                        'message' => 'No access rights in course context'
-                    );
-                }
-            }
-
-            return array($courses, $warnings);
-        }
-
-    }
 }
