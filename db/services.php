@@ -263,6 +263,43 @@ $functions = array(
         'capabilities'  => 'mod/lti:view'
     ),
 
+    'local_mobile_mod_survey_get_surveys_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_survey_get_surveys_by_courses',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns a list of survey instances in a provided set of courses,
+                            if no courses are provided then all the survey instances the user has access to will be returned.',
+        'type'          => 'read',
+        'capabilities'  => ''
+    ),
+
+    'local_mobile_mod_survey_view_survey' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_survey_view_survey',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Trigger the course module viewed event and update the module completion status.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/survey:participate'
+    ),
+
+    'local_mobile_mod_survey_get_questions' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_survey_get_questions',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Get the complete list of questions for the survey, including subquestions.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/survey:participate'
+    ),
+
+    'local_mobile_mod_survey_submit_answers' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_survey_submit_answers',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Submit the answers for a given survey.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/survey:participate'
+    ),
+
     'local_mobile_core_completion_mark_course_self_completed' => array(
         'classname'   => 'local_mobile_external',
         'methodname'  => 'core_completion_mark_course_self_completed',
@@ -377,6 +414,10 @@ $services = array(
             'local_mobile_mod_lti_get_tool_launch_data',
             'local_mobile_mod_lti_get_ltis_by_courses',
             'local_mobile_mod_lti_view_lti',
+            'local_mobile_mod_survey_get_surveys_by_courses',
+            'local_mobile_mod_survey_view_survey',
+            'local_mobile_mod_survey_get_questions',
+            'local_mobile_mod_survey_submit_answers',
             'local_mobile_core_completion_mark_course_self_completed',
             'local_mobile_mod_choice_delete_choice_responses',
         ),
