@@ -37,6 +37,7 @@ $services = array(
             'core_course_view_course',
             'core_enrol_get_enrolled_users',
             'core_enrol_get_users_courses',
+            'core_get_component_strings',   // Don't remove this, the app relies on this to check the min version.
             'core_group_get_course_user_groups',
             'core_files_get_files',
             'core_message_block_contacts',
