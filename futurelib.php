@@ -824,7 +824,6 @@ if (!function_exists('lti_get_launch_data')) {
      */
     function lti_get_launch_data($instance) {
         global $PAGE, $CFG;
-
         if (empty($instance->typeid)) {
             $tool = lti_get_tool_by_url_match($instance->toolurl, $instance->course);
             if ($tool) {
@@ -834,15 +833,12 @@ if (!function_exists('lti_get_launch_data')) {
             }
         } else {
             $typeid = $instance->typeid;
-            $tool = lti_get_type($typeid);
         }
-
         if ($typeid) {
             $typeconfig = lti_get_type_config($typeid);
         } else {
-            // There is no admin configuration for this tool. Use configuration in the lti instance record plus some defaults.
+            //There is no admin configuration for this tool. Use configuration in the lti instance record plus some defaults.
             $typeconfig = (array)$instance;
-
             $typeconfig['sendname'] = $instance->instructorchoicesendname;
             $typeconfig['sendemailaddr'] = $instance->instructorchoicesendemailaddr;
             $typeconfig['customparameters'] = $instance->instructorcustomparameters;
@@ -850,125 +846,64 @@ if (!function_exists('lti_get_launch_data')) {
             $typeconfig['allowroster'] = $instance->instructorchoiceallowroster;
             $typeconfig['forcessl'] = '0';
         }
-
-        // Default the organizationid if not specified.
+        //Default the organizationid if not specified
         if (empty($typeconfig['organizationid'])) {
             $urlparts = parse_url($CFG->wwwroot);
-
             $typeconfig['organizationid'] = $urlparts['host'];
         }
-
-        if (isset($tool->toolproxyid)) {
-            $toolproxy = lti_get_tool_proxy($tool->toolproxyid);
-            $key = $toolproxy->guid;
-            $secret = $toolproxy->secret;
+        if (!empty($instance->resourcekey)) {
+            $key = $instance->resourcekey;
+        } else if (!empty($typeconfig['resourcekey'])) {
+            $key = $typeconfig['resourcekey'];
         } else {
-            $toolproxy = null;
-            if (!empty($instance->resourcekey)) {
-                $key = $instance->resourcekey;
-            } else if (!empty($typeconfig['resourcekey'])) {
-                $key = $typeconfig['resourcekey'];
-            } else {
-                $key = '';
-            }
-            if (!empty($instance->password)) {
-                $secret = $instance->password;
-            } else if (!empty($typeconfig['password'])) {
-                $secret = $typeconfig['password'];
-            } else {
-                $secret = '';
-            }
+            $key = '';
         }
-
+        if (!empty($instance->password)) {
+            $secret = $instance->password;
+        } else if (!empty($typeconfig['password'])) {
+            $secret = $typeconfig['password'];
+        } else {
+            $secret = '';
+        }
         $endpoint = !empty($instance->toolurl) ? $instance->toolurl : $typeconfig['toolurl'];
         $endpoint = trim($endpoint);
-
-        // If the current request is using SSL and a secure tool URL is specified, use it.
+        //If the current request is using SSL and a secure tool URL is specified, use it
         if (lti_request_is_using_ssl() && !empty($instance->securetoolurl)) {
             $endpoint = trim($instance->securetoolurl);
         }
-
-        // If SSL is forced, use the secure tool url if specified. Otherwise, make sure https is on the normal launch URL.
-        if (isset($typeconfig['forcessl']) && ($typeconfig['forcessl'] == '1')) {
+        //If SSL is forced, use the secure tool url if specified. Otherwise, make sure https is on the normal launch URL.
+        if ($typeconfig['forcessl'] == '1') {
             if (!empty($instance->securetoolurl)) {
                 $endpoint = trim($instance->securetoolurl);
             }
-
             $endpoint = lti_ensure_url_is_https($endpoint);
         } else {
             if (!strstr($endpoint, '://')) {
                 $endpoint = 'http://' . $endpoint;
             }
         }
-
         $orgid = $typeconfig['organizationid'];
-
         $course = $PAGE->course;
-        $islti2 = isset($tool->toolproxyid);
-        $allparams = lti_build_request($instance, $typeconfig, $course, $typeid, $islti2);
-        if ($islti2) {
-            $requestparams = lti_build_request_lti2($tool, $allparams);
-        } else {
-            $requestparams = $allparams;
-        }
-        $requestparams = array_merge($requestparams, lti_build_standard_request($instance, $orgid, $islti2));
-        $customstr = '';
-        if (isset($typeconfig['customparameters'])) {
-            $customstr = $typeconfig['customparameters'];
-        }
-        $requestparams = array_merge($requestparams, lti_build_custom_parameters($toolproxy, $tool, $instance, $allparams, $customstr,
-            $instance->instructorcustomparameters, $islti2));
-
+        $requestparams = lti_build_request($instance, $typeconfig, $course);
         $launchcontainer = lti_get_launch_container($instance, $typeconfig);
-        $returnurlparams = array('course' => $course->id,
-                                 'launch_container' => $launchcontainer,
-                                 'instanceid' => $instance->id,
-                                 'sesskey' => sesskey());
-
+        $returnurlparams = array('course' => $course->id, 'launch_container' => $launchcontainer, 'instanceid' => $instance->id);
+        if ( $orgid ) {
+            $requestparams["tool_consumer_instance_guid"] = $orgid;
+        }
+        if (empty($key) || empty($secret)) {
+            $returnurlparams['unsigned'] = '1';
+        }
         // Add the return URL. We send the launch container along to help us avoid frames-within-frames when the user returns.
-        $url = new \moodle_url('/mod/lti/return.php', $returnurlparams);
+        $url = new moodle_url('/mod/lti/return.php', $returnurlparams);
         $returnurl = $url->out(false);
-
-        if (isset($typeconfig['forcessl']) && ($typeconfig['forcessl'] == '1')) {
+        if ($typeconfig['forcessl'] == '1') {
             $returnurl = lti_ensure_url_is_https($returnurl);
         }
-
-        $target = '';
-        switch($launchcontainer) {
-            case LTI_LAUNCH_CONTAINER_EMBED:
-            case LTI_LAUNCH_CONTAINER_EMBED_NO_BLOCKS:
-                $target = 'iframe';
-                break;
-            case LTI_LAUNCH_CONTAINER_REPLACE_MOODLE_WINDOW:
-                $target = 'frame';
-                break;
-            case LTI_LAUNCH_CONTAINER_WINDOW:
-                $target = 'window';
-                break;
-        }
-        if (!empty($target)) {
-            $requestparams['launch_presentation_document_target'] = $target;
-        }
-
         $requestparams['launch_presentation_return_url'] = $returnurl;
-
-        // Allow request params to be updated by sub-plugins.
-        $plugins = core_component::get_plugin_list('ltisource');
-        foreach (array_keys($plugins) as $plugin) {
-            $pluginparams = component_callback('ltisource_'.$plugin, 'before_launch',
-                array($instance, $endpoint, $requestparams), array());
-
-            if (!empty($pluginparams) && is_array($pluginparams)) {
-                $requestparams = array_merge($requestparams, $pluginparams);
-            }
-        }
-
         if (!empty($key) && !empty($secret)) {
             $parms = lti_sign_parameters($requestparams, $endpoint, "POST", $key, $secret);
-
-            $endpointurl = new \moodle_url($endpoint);
+            $endpointurl = new moodle_url($endpoint);
             $endpointparams = $endpointurl->params();
-
             // Strip querystring params in endpoint url from $parms to avoid duplication.
             if (!empty($endpointparams) && !empty($parms)) {
                 foreach (array_keys($endpointparams) as $paramname) {
@@ -977,13 +912,10 @@ if (!function_exists('lti_get_launch_data')) {
                     }
                 }
             }
-
         } else {
-            // If no key and secret, do the launch unsigned.
-            $returnurlparams['unsigned'] = '1';
+            //If no key and secret, do the launch unsigned.
             $parms = $requestparams;
         }
-
         return array($endpoint, $parms);
     }
 }
