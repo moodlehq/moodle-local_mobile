@@ -682,15 +682,10 @@ if (!function_exists('survey_save_answers')) {
         }
 
         if (!empty($answerstoinsert)) {
-            $DB->insert_records("survey_answers", $answerstoinsert);
+            foreach ($answerstoinsert as $answertoinsert) {
+                $DB->insert_record("survey_answers", $answertoinsert);
+            }
         }
 
-        $params = array(
-            'context' => $context,
-            'courseid' => $course->id,
-            'other' => array('surveyid' => $survey->id)
-        );
-        $event = \mod_survey\event\response_submitted::create($params);
-        $event->trigger();
     }
 }
