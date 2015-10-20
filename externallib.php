@@ -5064,14 +5064,14 @@ class local_mobile_external extends external_api {
             if ($question->type >= 0) {
                 // Parent is used in subquestions.
                 $question->parent = 0;
-                $questions[] = survey_translate_question($question);
+                $questions[] = (array) survey_translate_question($question);
 
                 // Check if the question has subquestions.
                 if ($question->multi) {
                     $subquestions = survey_get_subquestions($question);
                     foreach ($subquestions as $sq) {
                         $sq->parent = $question->id;
-                        $questions[] = survey_translate_question($sq);
+                        $questions[] = (array) survey_translate_question($sq);
                     }
                 }
             }
