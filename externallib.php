@@ -4565,7 +4565,7 @@ class local_mobile_external extends external_api {
         return new external_function_parameters(
             array(
                 'cmid' => new external_value(PARAM_INT, 'course module id'),
-                'userid' => new external_value(PARAM_INT, 'id of user, empty for current user', VALUE_OPTIONAL, 0)
+                'userid' => new external_value(PARAM_INT, 'id of user, empty for current user', VALUE_DEFAULT, 0)
             )
         );
     }
