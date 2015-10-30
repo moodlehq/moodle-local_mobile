@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die;
 
 require_once($CFG->dirroot . '/enrol/self/locallib.php');
-if (!function_exists('enrol_self_check_group_enrolment_key')) {}
+if (!function_exists('enrol_self_check_group_enrolment_key')) {
     /**
      * Check if the given password match a group enrolment key in the specified course.
      *
