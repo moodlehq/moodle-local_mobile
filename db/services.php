@@ -36,6 +36,24 @@ $functions = array(
         'type'          => 'write',
         'capabilities'  => '',
     ),
+
+    'local_mobile_core_course_search_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_course_search_courses',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Search courses by (name, module, block, tag)',
+        'type'          => 'read',
+        'capabilities'  => '',
+    ),
+
+    'local_mobile_enrol_self_enrol_user' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'enrol_self_enrol_user',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Self enrol the current user in the given course.',
+        'type'        => 'write'
+    ),
+
     'local_mobile_core_user_remove_user_device' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_user_remove_user_device',
@@ -369,6 +387,8 @@ $functions = array(
 $services = array(
    'Moodle Mobile additional features service'  => array(
         'functions' => array (
+            'local_mobile_core_course_search_courses',
+            'local_mobile_enrol_self_enrol_user',
             'core_webservice_get_site_info',
             'core_enrol_get_users_courses',
             'core_notes_create_notes',
