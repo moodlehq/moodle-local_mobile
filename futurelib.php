@@ -24,6 +24,35 @@
 
 defined('MOODLE_INTERNAL') || die;
 
+require_once($CFG->dirroot . '/enrol/self/locallib.php');
+if (!function_exists('enrol_self_check_group_enrolment_key')) {}
+    /**
+     * Check if the given password match a group enrolment key in the specified course.
+     *
+     * @param  int $courseid            course id
+     * @param  string $enrolpassword    enrolment password
+     * @return bool                     True if match
+     * @since  Moodle 3.0
+     */
+    function enrol_self_check_group_enrolment_key($courseid, $enrolpassword) {
+        global $DB;
+
+        $found = false;
+        $groups = $DB->get_records('groups', array('courseid' => $courseid), 'id ASC', 'id, enrolmentkey');
+
+        foreach ($groups as $group) {
+            if (empty($group->enrolmentkey)) {
+                continue;
+            }
+            if ($group->enrolmentkey === $enrolpassword) {
+                $found = true;
+                break;
+            }
+        }
+        return $found;
+    }
+}
+
 require_once($CFG->dirroot . '/mod/chat/lib.php');
 require_once($CFG->dirroot . '/mod/choice/lib.php');
 

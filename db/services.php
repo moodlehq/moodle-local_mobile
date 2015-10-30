@@ -34,6 +34,15 @@ $functions = array(
         'type'        => 'write',
     ),
 
+    'local_mobile_core_course_search_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'core_course_search_courses',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Search courses by (name, module, block, tag)',
+        'type'          => 'read',
+        'capabilities'  => '',
+    ),
+
     'local_mobile_core_group_get_activity_allowed_groups' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_group_get_activity_allowed_groups',
@@ -50,6 +59,14 @@ $functions = array(
         'description'   => 'Returns effective groupmode used in a given activity.',
         'type'          => 'read',
         'capabilities'  => ''
+    ),
+
+    'local_mobile_enrol_self_enrol_user' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'enrol_self_enrol_user',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Self enrol the current user in the given course.',
+        'type'        => 'write'
     ),
 
     'local_mobile_mod_assign_view_grading_table' => array(
@@ -371,8 +388,10 @@ $services = array(
             'mod_forum_view_forum',
             'mod_forum_view_forum_discussion',
             'local_mobile_core_completion_mark_course_self_completed',
+            'local_mobile_core_course_search_courses',
             'local_mobile_core_group_get_activity_allowed_groups',
             'local_mobile_core_group_get_activity_groupmode',
+            'local_mobile_enrol_self_enrol_user',
             'local_mobile_mod_assign_view_grading_table',
             'local_mobile_mod_book_view_book',
             'local_mobile_mod_chat_get_chat_latest_messages',
