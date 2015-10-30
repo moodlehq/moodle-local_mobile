@@ -42,7 +42,7 @@ class local_mobile_external extends external_api {
      * @return external_function_parameters
      * @since Moodle 3.0
      */
-    public static function local_mobile_search_courses_parameters() {
+    public static function core_course_search_courses_parameters() {
         return new external_function_parameters(
             array(
                 'criterianame'  => new external_value(PARAM_ALPHA, 'criteria name
@@ -65,7 +65,7 @@ class local_mobile_external extends external_api {
      * @since Moodle 3.0
      * @throws moodle_exception
      */
-    public static function local_mobile_search_courses($criterianame, $criteriavalue, $page=0, $perpage=0) {
+    public static function core_course_search_courses($criterianame, $criteriavalue, $page=0, $perpage=0) {
         global $CFG;
         require_once($CFG->libdir . '/coursecatlib.php');
 
@@ -77,7 +77,7 @@ class local_mobile_external extends external_api {
             'page'          => $page,
             'perpage'       => $perpage
         );
-        $params = self::validate_parameters(self::local_mobile_search_courses_parameters(), $parameters);
+        $params = self::validate_parameters(self::core_course_search_courses_parameters(), $parameters);
 
         $allowedcriterianames = array('search', 'modulelist', 'blocklist', 'tagid');
         if (!in_array($params['criterianame'], $allowedcriterianames)) {
@@ -185,7 +185,7 @@ class local_mobile_external extends external_api {
      * @return external_description
      * @since Moodle 3.0
      */
-    public static function local_mobile_search_courses_returns() {
+    public static function core_course_search_courses_returns() {
 
         return new external_single_structure(
             array(
@@ -237,7 +237,7 @@ class local_mobile_external extends external_api {
      * @return external_function_parameters
      * @since Moodle 3.0
      */
-    public static function local_mobile_enrol_user_parameters() {
+    public static function enrol_self_enrol_user_parameters() {
         return new external_function_parameters(
             array(
                 'courseid' => new external_value(PARAM_INT, 'Id of the course'),
@@ -257,12 +257,12 @@ class local_mobile_external extends external_api {
      * @since Moodle 3.0
      * @throws moodle_exception
      */
-    public static function local_mobile_enrol_user($courseid, $password = '', $instanceid = 0) {
+    public static function enrol_self_enrol_user($courseid, $password = '', $instanceid = 0) {
         global $CFG;
 
         require_once($CFG->libdir . '/enrollib.php');
 
-        $params = self::validate_parameters(self::local_mobile_enrol_user_parameters(),
+        $params = self::validate_parameters(self::enrol_self_enrol_user_parameters(),
                                             array(
                                                 'courseid' => $courseid,
                                                 'password' => $password,
@@ -376,7 +376,7 @@ class local_mobile_external extends external_api {
      * @return external_description
      * @since Moodle 3.0
      */
-    public static function local_mobile_enrol_user_returns() {
+    public static function enrol_self_enrol_user_returns() {
         return new external_single_structure(
             array(
                 'status' => new external_value(PARAM_BOOL, 'status: true if the user is enrolled, false otherwise'),
