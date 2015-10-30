@@ -34,6 +34,357 @@ require_once("$CFG->dirroot/notes/lib.php");
 
 class local_mobile_external extends external_api {
 
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function local_mobile_search_courses_parameters() {
+        return new external_function_parameters(
+            array(
+                'criterianame'  => new external_value(PARAM_ALPHA, 'criteria name
+                                                        (search, modulelist (only admins), blocklist (only admins), tagid)'),
+                'criteriavalue' => new external_value(PARAM_RAW, 'criteria value'),
+                'page'          => new external_value(PARAM_INT, 'page number (0 based)', VALUE_DEFAULT, 0),
+                'perpage'       => new external_value(PARAM_INT, 'items per page', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Search courses following the specified criteria.
+     *
+     * @param string $criterianame  Criteria name (search, modulelist (only admins), blocklist (only admins), tagid)
+     * @param string $criteriavalue Criteria value
+     * @param int $page             Page number (for pagination)
+     * @param int $perpage          Items per page
+     * @return array of course objects and warnings
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function local_mobile_search_courses($criterianame, $criteriavalue, $page=0, $perpage=0) {
+        global $CFG;
+        require_once($CFG->libdir . '/coursecatlib.php');
+
+        $warnings = array();
+
+        $parameters = array(
+            'criterianame'  => $criterianame,
+            'criteriavalue' => $criteriavalue,
+            'page'          => $page,
+            'perpage'       => $perpage
+        );
+        $params = self::validate_parameters(self::local_mobile_search_courses_parameters(), $parameters);
+
+        $allowedcriterianames = array('search', 'modulelist', 'blocklist', 'tagid');
+        if (!in_array($params['criterianame'], $allowedcriterianames)) {
+            throw new invalid_parameter_exception('Invalid value for criterianame parameter (value: '.$params['criterianame'].'),' .
+                'allowed values are: '.implode(',', $allowedcriterianames));
+        }
+
+        if ($params['criterianame'] == 'modulelist' or $params['criterianame'] == 'blocklist') {
+            require_capability('moodle/site:config', context_system::instance());
+        }
+
+        $paramtype = array(
+            'search' => PARAM_RAW,
+            'modulelist' => PARAM_PLUGIN,
+            'blocklist' => PARAM_INT,
+            'tagid' => PARAM_INT
+        );
+        $params['criteriavalue'] = clean_param($params['criteriavalue'], $paramtype[$params['criterianame']]);
+
+        // Prepare the search API options.
+        $searchcriteria = array();
+        $searchcriteria[$params['criterianame']] = $params['criteriavalue'];
+
+        $options = array();
+        if ($params['perpage'] != 0) {
+            $offset = $params['page'] * $params['perpage'];
+            $options = array('offset' => $offset, 'limit' => $params['perpage']);
+        }
+
+        // Search the courses.
+        $courses = coursecat::search_courses($searchcriteria, $options);
+        $totalcount = coursecat::search_courses_count($searchcriteria);
+
+        $finalcourses = array();
+        $categoriescache = array();
+
+        foreach ($courses as $course) {
+
+            $coursecontext = context_course::instance($course->id);
+
+            // Category information.
+            if (!isset($categoriescache[$course->category])) {
+                $categoriescache[$course->category] = coursecat::get($course->category);
+            }
+            $category = $categoriescache[$course->category];
+
+            // Retrieve course overfiew used files.
+            $files = array();
+            foreach ($course->get_course_overviewfiles() as $file) {
+                $fileurl = moodle_url::make_webservice_pluginfile_url($file->get_contextid(), $file->get_component(),
+                                                                        $file->get_filearea(), null, $file->get_filepath(),
+                                                                        $file->get_filename())->out(false);
+                $files[] = array(
+                    'filename' => $file->get_filename(),
+                    'fileurl' => $fileurl,
+                    'filesize' => $file->get_filesize()
+                );
+            }
+
+            // Retrieve the course contacts,
+            // we need here the users fullname since if we are not enrolled can be difficult to obtain them via other Web Services.
+            $coursecontacts = array();
+            foreach ($course->get_course_contacts() as $contact) {
+                 $coursecontacts[] = array(
+                    'id' => $contact['user']->id,
+                    'fullname' => $contact['username']
+                );
+            }
+
+            // Allowed enrolment methods (maybe we can self-enrol).
+            $enroltypes = array();
+            $instances = enrol_get_instances($course->id, true);
+            foreach ($instances as $instance) {
+                $enroltypes[] = $instance->enrol;
+            }
+
+            // Format summary.
+            list($summary, $summaryformat) =
+                external_format_text($course->summary, $course->summaryformat, $coursecontext->id, 'course', 'summary', null);
+
+            $coursereturns = array();
+            $coursereturns['id']                = $course->id;
+            $coursereturns['fullname']          = $course->get_formatted_fullname();
+            $coursereturns['shortname']         = $course->get_formatted_shortname();
+            $coursereturns['categoryid']        = $course->category;
+            $coursereturns['categoryname']      = $category->name;
+            $coursereturns['summary']           = $summary;
+            $coursereturns['summaryformat']     = $summaryformat;
+            $coursereturns['overviewfiles']     = $files;
+            $coursereturns['contacts']          = $coursecontacts;
+            $coursereturns['enrollmentmethods'] = $enroltypes;
+            $finalcourses[] = $coursereturns;
+        }
+
+        return array(
+            'total' => $totalcount,
+            'courses' => $finalcourses,
+            'warnings' => $warnings
+        );
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.0
+     */
+    public static function local_mobile_search_courses_returns() {
+
+        return new external_single_structure(
+            array(
+                'total' => new external_value(PARAM_INT, 'total course count'),
+                'courses' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'course id'),
+                            'fullname' => new external_value(PARAM_TEXT, 'course full name'),
+                            'shortname' => new external_value(PARAM_TEXT, 'course short name'),
+                            'categoryid' => new external_value(PARAM_INT, 'category id'),
+                            'categoryname' => new external_value(PARAM_TEXT, 'category name'),
+                            'summary' => new external_value(PARAM_RAW, 'summary'),
+                            'summaryformat' => new external_format_value('summary'),
+                            'overviewfiles' => new external_multiple_structure(
+                                new external_single_structure(
+                                    array(
+                                        'filename' => new external_value(PARAM_FILE, 'overview file name'),
+                                        'fileurl'  => new external_value(PARAM_URL, 'overview file url'),
+                                        'filesize'  => new external_value(PARAM_INT, 'overview file size'),
+                                    )
+                                ),
+                                'additional overview files attached to this course'
+                            ),
+                            'contacts' => new external_multiple_structure(
+                                new external_single_structure(
+                                    array(
+                                        'id' => new external_value(PARAM_INT, 'contact user id'),
+                                        'fullname'  => new external_value(PARAM_NOTAGS, 'contact user fullname'),
+                                    )
+                                ),
+                                'contact users'
+                            ),
+                            'enrollmentmethods' => new external_multiple_structure(
+                                new external_value(PARAM_PLUGIN, 'enrollment method'),
+                                'enrollment methods list'
+                            ),
+                        )
+                    ), 'course'
+                ),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.0
+     */
+    public static function local_mobile_enrol_user_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'Id of the course'),
+                'password' => new external_value(PARAM_RAW, 'Enrolment key', VALUE_DEFAULT, ''),
+                'instanceid' => new external_value(PARAM_INT, 'Instance id of self enrolment plugin.', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Self enrol the current user in the given course.
+     *
+     * @param int $courseid id of course
+     * @param string $password enrolment key
+     * @param int $instanceid instance id of self enrolment plugin
+     * @return array of warnings and status result
+     * @since Moodle 3.0
+     * @throws moodle_exception
+     */
+    public static function local_mobile_enrol_user($courseid, $password = '', $instanceid = 0) {
+        global $CFG;
+
+        require_once($CFG->libdir . '/enrollib.php');
+
+        $params = self::validate_parameters(self::local_mobile_enrol_user_parameters(),
+                                            array(
+                                                'courseid' => $courseid,
+                                                'password' => $password,
+                                                'instanceid' => $instanceid
+                                            ));
+
+        $warnings = array();
+
+        $course = get_course($params['courseid']);
+        $context = context_course::instance($course->id);
+        // Note that we can't use validate_context because the user is not enrolled in the course.
+        require_login(null, false, null, false, true);
+
+        if (!$course->visible and !has_capability('moodle/course:viewhiddencourses', $context)) {
+            throw new moodle_exception('coursehidden');
+        }
+
+        // Retrieve the self enrolment plugin.
+        $enrol = enrol_get_plugin('self');
+        if (empty($enrol)) {
+            throw new moodle_exception('canntenrol', 'enrol_self');
+        }
+
+        // We can expect multiple self-enrolment instances.
+        $instances = array();
+        $enrolinstances = enrol_get_instances($course->id, true);
+        foreach ($enrolinstances as $courseenrolinstance) {
+            if ($courseenrolinstance->enrol == "self") {
+                // Instance specified.
+                if (!empty($params['instanceid'])) {
+                    if ($courseenrolinstance->id == $params['instanceid']) {
+                        $instances[] = $courseenrolinstance;
+                        break;
+                    }
+                } else {
+                    $instances[] = $courseenrolinstance;
+                }
+
+            }
+        }
+        if (empty($instances)) {
+            throw new moodle_exception('canntenrol', 'enrol_self');
+        }
+
+        // Try to enrol the user in the instance/s.
+        $enrolled = false;
+        foreach ($instances as $instance) {
+            $enrolstatus = $enrol->can_self_enrol($instance);
+            if ($enrolstatus === true) {
+                if ($instance->password and $params['password'] !== $instance->password) {
+
+                    // Check if we are using group enrolment keys.
+                    if ($instance->customint1) {
+                        require_once($CFG->dirroot . "/enrol/self/locallib.php");
+
+                        if (!enrol_self_check_group_enrolment_key($course->id, $params['password'])) {
+                            $warnings[] = array(
+                                'item' => 'instance',
+                                'itemid' => $instance->id,
+                                'warningcode' => '2',
+                                'message' => get_string('passwordinvalid', 'enrol_self')
+                            );
+                            continue;
+                        }
+                    } else {
+                        if ($enrol->get_config('showhint')) {
+                            $hint = core_text::substr($instance->password, 0, 1);
+                            $warnings[] = array(
+                                'item' => 'instance',
+                                'itemid' => $instance->id,
+                                'warningcode' => '3',
+                                'message' => s(get_string('passwordinvalidhint', 'enrol_self', $hint)) // message is PARAM_TEXT.
+                            );
+                            continue;
+                        } else {
+                            $warnings[] = array(
+                                'item' => 'instance',
+                                'itemid' => $instance->id,
+                                'warningcode' => '4',
+                                'message' => get_string('passwordinvalid', 'enrol_self')
+                            );
+                            continue;
+                        }
+                    }
+                }
+
+                // Do the enrolment.
+                $data = array('enrolpassword' => $params['password']);
+                $enrol->enrol_self($instance, (object) $data);
+                $enrolled = true;
+                break;
+            } else {
+                $warnings[] = array(
+                    'item' => 'instance',
+                    'itemid' => $instance->id,
+                    'warningcode' => '1',
+                    'message' => $enrolstatus
+                );
+            }
+        }
+
+        $result = array();
+        $result['status'] = $enrolled;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.0
+     */
+    public static function local_mobile_enrol_user_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if the user is enrolled, false otherwise'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+
     /**
      * Returns description of method parameters.
      *
