@@ -127,7 +127,7 @@ class local_mobile_external extends external_api {
             // Retrieve course overfiew used files.
             $files = array();
             foreach ($course->get_course_overviewfiles() as $file) {
-                $fileurl = moodle_url::make_webservice_pluginfile_url($file->get_contextid(), $file->get_component(),
+                $fileurl = moodle_url::make_pluginfile_url($file->get_contextid(), $file->get_component(),
                                                                         $file->get_filearea(), null, $file->get_filepath(),
                                                                         $file->get_filename())->out(false);
                 $files[] = array(
@@ -3931,7 +3931,7 @@ class local_mobile_external extends external_api {
                         $response['fullname'] = fullname($userresponse, $fullnamecap);
                         $usercontext = context_user::instance($userresponse->id, IGNORE_MISSING);
                         if ($usercontext) {
-                            $profileimageurl = moodle_url::make_webservice_pluginfile_url($usercontext->id, 'user', 'icon', null,
+                            $profileimageurl = moodle_url::make_pluginfile_url($usercontext->id, 'user', 'icon', null,
                                                                                          '/', 'f1')->out(false);
                         } else {
                             $profileimageurl = '';
