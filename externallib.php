@@ -2244,7 +2244,7 @@ class local_mobile_external extends external_api {
         return array (
             'class'   => new external_value(PARAM_RAW, 'class'),
             'content' => new external_value(PARAM_RAW, 'cell content'),
-            'headers' => new external_value(PARAM_RAW, 'headers')
+            'headers' => new external_value(PARAM_RAW, 'headers', VALUE_OPTIONAL)
         );
     }
 
@@ -2272,8 +2272,8 @@ class local_mobile_external extends external_api {
                                                 'class' => new external_value(PARAM_RAW, 'file name'),
                                                 'colspan' => new external_value(PARAM_INT, 'mime type'),
                                                 'content'  => new external_value(PARAM_RAW, ''),
-                                                'celltype'  => new external_value(PARAM_RAW, ''),
-                                                'id'  => new external_value(PARAM_ALPHANUMEXT, '')
+                                                'celltype'  => new external_value(PARAM_RAW, '', VALUE_OPTIONAL),
+                                                'id'  => new external_value(PARAM_ALPHANUMEXT, '', VALUE_OPTIONAL)
                                             ), 'The item returned data', VALUE_OPTIONAL
                                         ),
                                         'leader' => new external_single_structure(
