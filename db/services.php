@@ -24,6 +24,16 @@
 
 defined('MOODLE_INTERNAL') || die;
 
+$functions = array(
+    'local_mobile_get_plugin_settings' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'get_plugin_settings',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Retrieve the plugin settings.',
+        'type'        => 'read',
+    ),
+);
+
 $services = array(
    'Moodle Mobile additional features service'  => array(
         'functions' => array (
@@ -79,6 +89,7 @@ $services = array(
             'core_completion_mark_course_self_completed',
             'core_group_get_activity_allowed_groups',
             'core_group_get_activity_groupmode',
+            'local_mobile_get_plugin_settings',
             'mod_assign_view_grading_table',
             'mod_book_view_book',
             'mod_chat_get_chat_latest_messages',
