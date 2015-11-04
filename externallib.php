@@ -25,13 +25,6 @@
 defined('MOODLE_INTERNAL') || die;
 
 require_once("$CFG->libdir/externallib.php");
-require_once("$CFG->dirroot/local/mobile/futurelib.php");
-require_once("$CFG->dirroot/message/lib.php");
-require_once("$CFG->libdir/completionlib.php");
-require_once("$CFG->dirroot/comment/lib.php");
-require_once("$CFG->dirroot/rating/lib.php");
-require_once("$CFG->dirroot/notes/lib.php");
-
 
 class local_mobile_external extends external_api {
 
