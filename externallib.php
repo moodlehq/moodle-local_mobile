@@ -1896,6 +1896,9 @@ class local_mobile_external extends external_api {
             throw new moodle_exception('nopermissiontoviewgrades', 'error',  $CFG->wwwroot.  '/course/view.php?id=' . $courseid);
         }
 
+        // Force regrade to update items marked as 'needupdate'.
+        grade_regrade_final_grades($course->id);
+
         $gpr = new grade_plugin_return(
             array(
                 'type' => 'report',
