@@ -13,3 +13,7 @@ https://moodle.org/plugins/view.php?plugin=local_mobile
 
 Source code for different versions (branches):
 https://github.com/jleyva/moodle-local_mobile/branches
+
+Support forum: https://moodle.org/mod/forum/view.php?id=7798
+
+Tracker (bugs): https://tracker.moodle.org/projects/MOBILE
