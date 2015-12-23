@@ -39,6 +39,13 @@ $functions = array(
         'description' => 'Return guest enrolment instance information.',
         'type'        => 'read'
     ),
+    'local_mobile_mod_forum_can_add_discussion' => array(
+        'classname' => 'local_mobile_external',
+        'methodname' => 'mod_forum_can_add_discussion',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Check if the current user can add discussions in the given forum (and optionally for the given group).',
+        'type' => 'read'
+    ),
 );
 
 $services = array(
@@ -100,6 +107,7 @@ $services = array(
             'core_group_get_activity_groupmode',
             'local_mobile_enrol_guest_get_instance_info',
             'local_mobile_get_plugin_settings',
+            'local_mobile_mod_forum_can_add_discussion',
             'mod_assign_view_grading_table',
             'mod_book_view_book',
             'mod_chat_get_chat_latest_messages',
