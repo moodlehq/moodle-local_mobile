@@ -46,6 +46,7 @@ $services = array(
             'core_course_get_courses',
             'core_course_search_courses',
             'core_course_view_course',
+            'core_enrol_get_course_enrolment_methods',
             'core_enrol_get_enrolled_users',
             'core_enrol_get_users_courses',
             'core_get_component_strings',   // Don't remove this, the app relies on this to check the min version.
@@ -75,6 +76,7 @@ $services = array(
             'core_user_view_user_profile',
             'core_webservice_get_site_info',
             'enrol_self_enrol_user',
+            'enrol_self_get_instance_info',
             'gradereport_user_get_grades_table',
             'gradereport_user_view_grade_report',
             'message_airnotifier_are_notification_preferences_configured',
