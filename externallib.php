@@ -25,9 +25,66 @@
 defined('MOODLE_INTERNAL') || die;
 
 require_once("$CFG->libdir/externallib.php");
-require_once($CFG->libdir . '/enrollib.php');
+require_once("$CFG->dirroot/local/mobile/futurelib.php");
 
 class local_mobile_external extends external_api {
+
+    /**
+     * Returns description of get_course_enrolment_methods() parameters
+     *
+     * @return external_function_parameters
+     */
+    public static function core_enrol_get_course_enrolment_methods_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value(PARAM_INT, 'Course id')
+            )
+        );
+    }
+    /**
+     * Get list of active course enrolment methods for current user.
+     *
+     * @param int $courseid
+     * @return array of course enrolment methods
+     */
+    public static function core_enrol_get_course_enrolment_methods($courseid) {
+        $params = self::validate_parameters(self::core_enrol_get_course_enrolment_methods_parameters(), array('courseid' => $courseid));
+        $coursecontext = context_course::instance($params['courseid']);
+        $categorycontext = $coursecontext->get_parent_context();
+        self::validate_context($categorycontext);
+        $result = array();
+        $enrolinstances = enrol_get_instances($params['courseid'], true);
+        foreach ($enrolinstances as $enrolinstance) {
+            if ($enrolplugin = enrol_get_plugin($enrolinstance->enrol)) {
+                if ($instanceinfo = $enrolplugin->get_enrol_info($enrolinstance)) {
+                    $result[] = (array) $instanceinfo;
+                } else if ($enrolinstance->enrol == 'guest') {
+                    $result[] = (array) enrol_guest_get_enrol_info($enrolinstance);
+                }
+            }
+        }
+        return $result;
+    }
+    /**
+     * Returns description of get_course_enrolment_methods() result value
+     *
+     * @return external_description
+     */
+    public static function core_enrol_get_course_enrolment_methods_returns() {
+        return new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'id' => new external_value(PARAM_INT, 'id of course enrolment instance'),
+                    'courseid' => new external_value(PARAM_INT, 'id of course'),
+                    'type' => new external_value(PARAM_PLUGIN, 'type of enrolment plugin'),
+                    'name' => new external_value(PARAM_RAW, 'name of enrolment plugin'),
+                    'status' => new external_value(PARAM_RAW, 'status of enrolment plugin'),
+                    'wsfunction' => new external_value(PARAM_ALPHANUMEXT, 'webservice function to get more information', VALUE_OPTIONAL),
+                )
+            )
+        );
+    }
+
 
     /**
      * Returns description of method parameters
@@ -123,22 +180,7 @@ class local_mobile_external extends external_api {
         if (!$course->visible and !has_capability('moodle/course:viewhiddencourses', $context)) {
             throw new moodle_exception('coursehidden');
         }
-        $instanceinfo = $enrolplugin->get_enrol_info($enrolinstance);
-
-        $instanceinfo = new stdClass();
-        $instanceinfo->id = $enrolinstance->id;
-        $instanceinfo->courseid = $enrolinstance->courseid;
-        $instanceinfo->type = $enrolplugin->get_name();
-        $instanceinfo->name = $enrolplugin->get_instance_name($instance);
-        $instanceinfo->status = $enrolinstance->status == ENROL_INSTANCE_ENABLED;
-        // Specifics enrolment method parameters.
-        $instanceinfo->requiredparam = new stdClass();
-        $instanceinfo->requiredparam->passwordrequired = !empty($enrolinstance->password);
-
-        // If the plugin is enabled, return the URL for obtaining more information.
-        if ($instanceinfo->status) {
-            $instanceinfo->wsfunction = 'enrol_guest_get_instance_info';
-        }
+        $instanceinfo = enrol_guest_get_enrol_info($enrolinstance);
 
         // Specific instance information.
         $instanceinfo->passwordrequired = $instanceinfo->requiredparam->passwordrequired;
