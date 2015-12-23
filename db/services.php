@@ -32,6 +32,13 @@ $functions = array(
         'description' => 'Retrieve the plugin settings.',
         'type'        => 'read',
     ),
+    'local_mobile_enrol_guest_get_instance_info' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'enrol_guest_get_instance_info',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Return guest enrolment instance information.',
+        'type'        => 'read'
+    ),
 );
 
 $services = array(
@@ -91,6 +98,7 @@ $services = array(
             'core_completion_mark_course_self_completed',
             'core_group_get_activity_allowed_groups',
             'core_group_get_activity_groupmode',
+            'local_mobile_enrol_guest_get_instance_info',
             'local_mobile_get_plugin_settings',
             'mod_assign_view_grading_table',
             'mod_book_view_book',
