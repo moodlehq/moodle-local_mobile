@@ -43,6 +43,14 @@ $functions = array(
         'capabilities'  => '',
     ),
 
+    'local_mobile_core_enrol_get_course_enrolment_methods' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'core_enrol_get_course_enrolment_methods',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Get the list of course enrolment methods',
+        'type'        => 'read',
+    ),
+
     'local_mobile_core_group_get_activity_allowed_groups' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_group_get_activity_allowed_groups',
@@ -59,6 +67,14 @@ $functions = array(
         'description'   => 'Returns effective groupmode used in a given activity.',
         'type'          => 'read',
         'capabilities'  => ''
+    ),
+
+    'local_mobile_enrol_guest_get_instance_info' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'enrol_guest_get_instance_info',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Return guest enrolment instance information.',
+        'type'        => 'read'
     ),
 
     'local_mobile_enrol_self_enrol_user' => array(
@@ -221,6 +237,14 @@ $functions = array(
         'description'   => 'Create new posts into an existing discussion.',
         'type'          => 'write',
         'capabilities'  => 'mod/forum:replypost'
+    ),
+
+    'local_mobile_mod_forum_can_add_discussion' => array(
+        'classname' => 'local_mobile_external',
+        'methodname' => 'mod_forum_can_add_discussion',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Check if the current user can add discussions in the given forum (and optionally for the given group).',
+        'type' => 'read'
     ),
 
     'local_mobile_mod_forum_get_forums_by_courses' => array(
@@ -389,8 +413,10 @@ $services = array(
             'mod_forum_view_forum_discussion',
             'local_mobile_core_completion_mark_course_self_completed',
             'local_mobile_core_course_search_courses',
+            'local_mobile_core_enrol_get_course_enrolment_methods',
             'local_mobile_core_group_get_activity_allowed_groups',
             'local_mobile_core_group_get_activity_groupmode',
+            'local_mobile_enrol_guest_get_instance_info',
             'local_mobile_enrol_self_enrol_user',
             'local_mobile_mod_assign_view_grading_table',
             'local_mobile_mod_book_view_book',
@@ -409,6 +435,7 @@ $services = array(
             'local_mobile_mod_folder_view_folder',
             'local_mobile_mod_forum_add_discussion',
             'local_mobile_mod_forum_add_discussion_post',
+            'local_mobile_mod_forum_can_add_discussion',
             'local_mobile_mod_forum_get_forums_by_courses',
             'local_mobile_mod_imscp_view_imscp',
             'local_mobile_mod_lti_get_ltis_by_courses',

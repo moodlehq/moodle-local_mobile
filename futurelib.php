@@ -623,3 +623,26 @@ if (!function_exists('survey_save_answers')) {
         $event->trigger();
     }
 }
+
+require_once($CFG->libdir . '/enrollib.php');
+
+function enrol_guest_get_enrol_info($enrolinstance) {
+    $enrolplugin = enrol_get_plugin('guest');
+
+    $instanceinfo = new stdClass();
+    $instanceinfo->id = $enrolinstance->id;
+    $instanceinfo->courseid = $enrolinstance->courseid;
+    $instanceinfo->type = $enrolplugin->get_name();
+    $instanceinfo->name = $enrolplugin->get_instance_name($enrolinstance);
+    $instanceinfo->status = $enrolinstance->status == ENROL_INSTANCE_ENABLED;
+    // Specifics enrolment method parameters.
+    $instanceinfo->requiredparam = new stdClass();
+    $instanceinfo->requiredparam->passwordrequired = !empty($enrolinstance->password);
+
+    // If the plugin is enabled, return the URL for obtaining more information.
+    if ($instanceinfo->status) {
+        $instanceinfo->wsfunction = 'enrol_guest_get_instance_info';
+    }
+    return $instanceinfo;
+}
+
