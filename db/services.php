@@ -464,6 +464,30 @@ $functions = array(
         'capabilities'  => 'mod/survey:participate'
     ),
 
+    'local_mobile_core_enrol_get_course_enrolment_methods' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'core_enrol_get_course_enrolment_methods',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Get the list of course enrolment methods',
+        'type'        => 'read',
+    ),
+
+    'local_mobile_enrol_guest_get_instance_info' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'enrol_guest_get_instance_info',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Return guest enrolment instance information.',
+        'type'        => 'read'
+    ),
+
+    'local_mobile_mod_forum_can_add_discussion' => array(
+        'classname' => 'local_mobile_external',
+        'methodname' => 'mod_forum_can_add_discussion',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Check if the current user can add discussions in the given forum (and optionally for the given group).',
+        'type' => 'read'
+    ),
+
 );
 
 $services = array(
@@ -555,6 +579,9 @@ $services = array(
             'local_mobile_mod_survey_get_surveys_by_courses',
             'local_mobile_mod_survey_submit_answers',
             'local_mobile_mod_survey_view_survey',
+            'local_mobile_core_enrol_get_course_enrolment_methods',
+            'local_mobile_enrol_guest_get_instance_info',
+            'local_mobile_mod_forum_can_add_discussion',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
