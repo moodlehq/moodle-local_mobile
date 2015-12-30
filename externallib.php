@@ -4995,7 +4995,7 @@ class local_mobile_external extends external_api {
                 $module['course'] = $lti->course;
                 $module['name']  = external_format_string($lti->name, $context->id);
 
-                $viewablefields = [];
+                $viewablefields = array();
                 if (has_capability('mod/lti:view', $context)) {
                     list($module['intro'], $module['introformat']) =
                         external_format_text($lti->intro, $lti->introformat, $context->id, 'mod_lti', 'intro', $lti->id);
