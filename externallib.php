@@ -6334,7 +6334,7 @@ class local_mobile_external extends external_api {
                         if ($packagefile = $fs->get_file($context->id, 'mod_scorm', 'package', 0, '/', $scorm->reference)) {
                             $module['packagesize'] = $packagefile->get_filesize();
                             // Download URL.
-                            $module['packageurl'] = moodle_url::make_webservice_pluginfile_url(
+                            $module['packageurl'] = moodle_url::make_pluginfile_url(
                                                     $context->id, 'mod_scorm', 'package', 0, '/', $scorm->reference)->out(false);
                             // Replace by an URL that can be handle by local_mobile.
                             $module['packageurl'] = str_replace('/webservice/pluginfile.php', '/local/mobile/pluginfile.php', $module['packageurl']);
