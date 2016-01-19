@@ -7498,7 +7498,7 @@ class local_mobile_external extends external_api {
                             $module['packageurl'] = moodle_url::make_pluginfile_url(
                                                     $context->id, 'mod_scorm', 'package', 0, '/', $scorm->reference)->out(false);
                             // Replace by an URL that can be handle by local_mobile.
-                            $module['packageurl'] = str_replace('/webservice/pluginfile.php', '/local/mobile/pluginfile.php', $module['packageurl']);
+                            $module['packageurl'] = str_replace('/pluginfile.php', '/local/mobile/pluginfile.php', $module['packageurl']);
                         }
                     }
 
