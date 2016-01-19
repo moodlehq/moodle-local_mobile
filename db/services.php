@@ -259,24 +259,6 @@ $functions = array(
         'capabilities'  => 'mod/chat:chat'
     ),
 
-    'local_mobile_mod_chat_view_chat' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'mod_chat_view_chat',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Simulate the view.php web interface folder: trigger events, completion, etc...',
-        'type'          => 'write',
-        'capabilities'  => 'mod/chat:chat'
-    ),
-
-    'local_mobile_mod_choice_view_choice' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'mod_choice_view_choice',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Simulate the view.php web interface folder: trigger events, completion, etc...',
-        'type'          => 'write',
-        'capabilities'  => ''
-    ),
-
     'local_mobile_mod_choice_get_choice_results' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'mod_choice_get_choice_results',
@@ -341,14 +323,6 @@ $functions = array(
         'description' => 'Delete the given submitted responses in a choice',
         'type'        => 'write',
         'capabilities'  => 'mod/choice:choose'
-    ),
-
-    'local_mobile_mod_scorm_view_scorm' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'mod_scorm_view_scorm',
-        'description'   => 'Trigger the course module viewed event.',
-        'type'          => 'write',
-        'capabilities'  => ''
     ),
 
     'local_mobile_mod_scorm_get_scorm_attempt_count' => array(
@@ -512,8 +486,6 @@ $services = array(
             'local_mobile_mod_chat_send_chat_message',
             'local_mobile_mod_chat_get_chat_latest_messages',
             'local_mobile_mod_chat_get_chats_by_courses',
-            'local_mobile_mod_chat_view_chat',
-            'local_mobile_mod_choice_view_choice',
             'local_mobile_mod_choice_get_choice_results',
             'local_mobile_mod_choice_get_choice_options',
             'local_mobile_mod_choice_submit_choice_response',
@@ -528,7 +500,6 @@ $services = array(
             'local_mobile_mod_scorm_get_scorm_user_data',
             'local_mobile_mod_scorm_get_scorms_by_courses',
             'local_mobile_mod_scorm_insert_scorm_tracks',
-            'local_mobile_mod_scorm_view_scorm',
             'local_mobile_mod_survey_get_questions',
             'local_mobile_mod_survey_get_surveys_by_courses',
             'local_mobile_mod_survey_submit_answers',
