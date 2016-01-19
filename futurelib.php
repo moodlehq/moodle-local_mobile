@@ -676,6 +676,26 @@ function enrol_guest_get_enrol_info($enrolinstance) {
 require_once($CFG->dirroot . '/mod/scorm/lib.php');
 require_once($CFG->dirroot . '/mod/scorm/locallib.php');
 
+
+if (!function_exists('scorm_isset')) {
+    /**
+     * Check for a parameter in userdata and return it if it's set
+     * or return the value from $ifempty if its empty
+     *
+     * @param stdClass $userdata Contains user's data
+     * @param string $param parameter that should be checked
+     * @param string $ifempty value to be replaced with if $param is not set
+     * @return string value from $userdata->$param if its not empty, or $ifempty
+     */
+    function scorm_isset($userdata, $param, $ifempty = '') {
+        if (isset($userdata->$param)) {
+            return $userdata->$param;
+        } else {
+            return $ifempty;
+        }
+    }
+}
+
 if (!function_exists('scorm_get_availability_status')) {
 
     /**
