@@ -65,6 +65,8 @@ $services = array(
             'core_completion_mark_course_self_completed',
             'core_completion_update_activity_completion_status_manually',
             'core_course_get_contents',
+            'core_course_get_course_module',
+            'core_course_get_course_module_by_instance',
             'core_course_get_courses',
             'core_course_search_courses',
             'core_course_view_course',
