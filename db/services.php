@@ -34,6 +34,22 @@ $functions = array(
         'type'        => 'write',
     ),
 
+    'local_mobile_core_course_get_course_module' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'core_course_get_course_module',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Return information about a course module',
+        'type'        => 'read'
+    ),
+
+    'local_mobile_core_course_get_course_module_by_instance' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'core_course_get_course_module_by_instance',
+        'classpath'   => 'local/mobile/externallib.php',
+        'description' => 'Return information about a given module name and instance id',
+        'type'        => 'read'
+    ),
+
     'local_mobile_core_course_search_courses' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'core_course_search_courses',
@@ -472,6 +488,8 @@ $services = array(
             'mod_forum_view_forum',
             'mod_forum_view_forum_discussion',
             'local_mobile_core_completion_mark_course_self_completed',
+            'local_mobile_core_course_get_course_module',
+            'local_mobile_core_course_get_course_module_by_instance',
             'local_mobile_core_course_search_courses',
             'local_mobile_core_enrol_get_course_enrolment_methods',
             'local_mobile_core_group_get_activity_allowed_groups',
