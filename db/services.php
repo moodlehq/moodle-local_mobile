@@ -212,6 +212,7 @@ $services = array(
             'core_message_get_messages',
             'core_message_mark_message_read',
             'core_message_search_contacts',
+            'core_notes_delete_notes',
             'core_message_send_instant_messages',
             'core_message_unblock_contacts',
             'core_notes_create_notes',
