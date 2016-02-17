@@ -38,6 +38,10 @@ if ($hassiteconfig) {
                         get_string('local_mobiletypeoflogin_key', 'local_mobile'),
                         get_string('local_mobiletypeoflogin', 'local_mobile'), 1, $options));
 
+    $settings->add(new admin_setting_configtext('local_mobile/urlscheme',
+                        get_string('local_mobileurlscheme_key', 'local_mobile'),
+                        get_string('local_mobileurlscheme', 'local_mobile'), 'moodlemobile', PARAM_ALPHA));
+
     $url = new moodle_url('/local/mobile/checkconfiguration.php', array('sesskey' => sesskey()));
     $link = html_writer::link($url, get_string('checkpluginconfiguration', 'local_mobile'));
     $settings->add(new admin_setting_heading('checkpluginconfiguration', '', $link));
