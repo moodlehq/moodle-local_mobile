@@ -689,6 +689,69 @@ $functions = array(
         'classpath'     => 'local/mobile/externallib.php',
         'capabilities'  => 'mod/glossary:view'
     ),
+
+    'local_mobile_mod_wiki_get_wikis_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_get_wikis_by_courses',
+        'description'   => 'Returns a list of wiki instances in a provided set of courses, if ' .
+                           'no courses are provided then all the wiki instances the user has access to will be returned.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/wiki:viewpage',
+        'classpath'     => 'local/mobile/externallib.php',
+    ),
+
+    'local_mobile_mod_wiki_view_wiki' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_view_wiki',
+        'description'   => 'Trigger the course module viewed event and update the module completion status.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/wiki:viewpage',
+        'classpath'     => 'local/mobile/externallib.php',
+    ),
+
+    'local_mobile_mod_wiki_view_page' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_view_page',
+        'description'   => 'Trigger the page viewed event and update the module completion status.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/wiki:viewpage',
+        'classpath'     => 'local/mobile/externallib.php',
+    ),
+
+    'local_mobile_mod_wiki_get_subwikis' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_get_subwikis',
+        'description'   => 'Returns the list of subwikis the user can see in a specific wiki.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/wiki:viewpage',
+        'classpath'     => 'local/mobile/externallib.php',
+    ),
+    'local_mobile_mod_wiki_get_subwiki_pages' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_get_subwiki_pages',
+        'description'   => 'Returns the list of pages for a specific subwiki.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/wiki:viewpage',
+        'classpath'     => 'local/mobile/externallib.php',
+    ),
+
+    'local_mobile_mod_wiki_get_page_contents' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_get_page_contents',
+        'description'   => 'Returns the contents of a page.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/wiki:viewpage',
+        'classpath'     => 'local/mobile/externallib.php',
+    ),
+
+    'local_mobile_mod_wiki_get_subwiki_files' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_get_subwiki_files',
+        'description'   => 'Returns the list of files for a specific subwiki.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/wiki:viewpage',
+        'classpath'     => 'local/mobile/externallib.php',
+    ),
 );
 
 $services = array(
@@ -807,6 +870,13 @@ $services = array(
             'local_mobile_mod_glossary_get_entries_by_term',
             'local_mobile_mod_glossary_get_entries_to_approve',
             'local_mobile_mod_glossary_get_entry_by_id',
+            'local_mobile_mod_wiki_get_wikis_by_courses',
+            'local_mobile_mod_wiki_view_wiki',
+            'local_mobile_mod_wiki_view_page',
+            'local_mobile_mod_wiki_get_subwikis',
+            'local_mobile_mod_wiki_get_subwiki_pages',
+            'local_mobile_mod_wiki_get_page_contents',
+            'local_mobile_mod_wiki_get_subwiki_files',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,

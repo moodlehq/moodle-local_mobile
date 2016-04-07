@@ -1858,3 +1858,237 @@ if (!function_exists('glossary_get_visible_tabs')) {
         return $showtabs;
     }
 }
+
+require_once("$CFG->dirroot/mod/wiki/lib.php");
+require_once("$CFG->dirroot/mod/wiki/locallib.php");
+
+if (!function_exists('wiki_can_create_pages')) {
+    /**
+     * Check if the user can create pages in a certain wiki.
+     * @param context $context Wiki's context.
+     * @param integer|stdClass $user A user id or object. By default (null) checks the permissions of the current user.
+     * @return bool True if user can create pages, false otherwise.
+     * @since Moodle 3.1
+     */
+    function wiki_can_create_pages($context, $user = null) {
+        return has_capability('mod/wiki:createpage', $context, $user);
+    }
+}
+
+if (!function_exists('wiki_view')) {
+    /**
+     * Mark the activity completed (if required) and trigger the course_module_viewed event.
+     *
+     * @param  stdClass $wiki       Wiki object.
+     * @param  stdClass $course     Course object.
+     * @param  stdClass $cm         Course module object.
+     * @param  stdClass $context    Context object.
+     * @since Moodle 3.1
+     */
+    function wiki_view($wiki, $course, $cm, $context) {
+        // Trigger course_module_viewed event.
+        $params = array(
+            'context' => $context,
+            'objectid' => $wiki->id
+        );
+        $event = \mod_wiki\event\course_module_viewed::create($params);
+        $event->add_record_snapshot('course_modules', $cm);
+        $event->add_record_snapshot('course', $course);
+        $event->add_record_snapshot('wiki', $wiki);
+        $event->trigger();
+        // Completion.
+        $completion = new completion_info($course);
+        $completion->set_module_viewed($cm);
+    }
+}
+
+if (!function_exists('wiki_page_view')) {
+    /**
+     * Mark the activity completed (if required) and trigger the page_viewed event.
+     *
+     * @param  stdClass $wiki       Wiki object.
+     * @param  stdClass $page       Page object.
+     * @param  stdClass $course     Course object.
+     * @param  stdClass $cm         Course module object.
+     * @param  stdClass $context    Context object.
+     * @param  int $uid             Optional User ID.
+     * @param  array $other         Optional Other params: title, wiki ID, group ID, groupanduser, prettyview.
+     * @param  stdClass $subwiki    Optional Subwiki.
+     * @since Moodle 3.1
+     */
+    function wiki_page_view($wiki, $page, $course, $cm, $context, $uid = null, $other = null, $subwiki = null) {
+        // Trigger course_module_viewed event.
+        $params = array(
+            'context' => $context,
+            'objectid' => $page->id
+        );
+        if ($uid != null) {
+            $params['relateduserid'] = $uid;
+        }
+        if ($other != null) {
+            $params['other'] = $other;
+        }
+        $event = \mod_wiki\event\page_viewed::create($params);
+        $event->add_record_snapshot('wiki_pages', $page);
+        $event->add_record_snapshot('course_modules', $cm);
+        $event->add_record_snapshot('course', $course);
+        $event->add_record_snapshot('wiki', $wiki);
+        if ($subwiki != null) {
+            $event->add_record_snapshot('wiki_subwikis', $subwiki);
+        }
+        $event->trigger();
+        // Completion.
+        $completion = new completion_info($course);
+        $completion->set_module_viewed($cm);
+    }
+}
+
+if (!function_exists('wiki_get_possible_subwiki_by_group')) {
+    /**
+     * Get a sub wiki instance by wiki id, group id and user id.
+     * If the wiki doesn't exist in DB it will return an isntance with id -1.
+     *
+     * @param int $wikiid  Wiki ID.
+     * @param int $groupid Group ID.
+     * @param int $userid  User ID.
+     * @return object      Subwiki instance.
+     * @since Moodle 3.1
+     */
+    function wiki_get_possible_subwiki_by_group($wikiid, $groupid, $userid = 0) {
+        if (!$subwiki = wiki_get_subwiki_by_group($wikiid, $groupid, $userid)) {
+            $subwiki = new stdClass();
+            $subwiki->id = -1;
+            $subwiki->wikiid = $wikiid;
+            $subwiki->groupid = $groupid;
+            $subwiki->userid = $userid;
+        }
+        return $subwiki;
+    }
+}
+
+if (!function_exists('wiki_get_visible_subwikis')) {
+    /**
+     * Get all the possible subwikis visible to the user in a wiki.
+     * It will return all the subwikis that can be created in a wiki, even if they don't exist in DB yet.
+     *
+     * @param  stdClass $wiki          Wiki to get the subwikis from.
+     * @param  cm_info|stdClass $cm    Optional. The course module object.
+     * @param  context_module $context Optional. Context of wiki module.
+     * @return array                   List of subwikis.
+     * @since Moodle 3.1
+     */
+    function wiki_get_visible_subwikis($wiki, $cm = null, $context = null) {
+        global $USER;
+        $subwikis = array();
+        if (empty($wiki) or !is_object($wiki)) {
+            // Wiki not valid.
+            return $subwikis;
+        }
+        if (empty($cm)) {
+            $cm = get_coursemodule_from_instance('wiki', $wiki->id);
+        }
+        if (empty($context)) {
+            $context = context_module::instance($cm->id);
+        }
+        if (!has_capability('mod/wiki:viewpage', $context)) {
+            return $subwikis;
+        }
+        $manage = has_capability('mod/wiki:managewiki', $context);
+        if (!$groupmode = groups_get_activity_groupmode($cm)) {
+            // No groups.
+            if ($wiki->wikimode == 'collaborative') {
+                // Only 1 subwiki.
+                $subwikis[] = wiki_get_possible_subwiki_by_group($wiki->id, 0, 0);
+            } else if ($wiki->wikimode == 'individual') {
+                // There's 1 subwiki per user.
+                if ($manage) {
+                    // User can view all subwikis.
+                    $users = get_enrolled_users($context);
+                    foreach ($users as $user) {
+                        $subwikis[] = wiki_get_possible_subwiki_by_group($wiki->id, 0, $user->id);
+                    }
+                } else {
+                    // User can only see his subwiki.
+                    $subwikis[] = wiki_get_possible_subwiki_by_group($wiki->id, 0, $USER->id);
+                }
+            }
+        } else {
+            if ($wiki->wikimode == 'collaborative') {
+                // 1 subwiki per group.
+                $aag = has_capability('moodle/site:accessallgroups', $context);
+                if ($aag || $groupmode == VISIBLEGROUPS) {
+                    // User can see all groups.
+                    $allowedgroups = groups_get_all_groups($cm->course, 0, $cm->groupingid);
+                    $allparticipants = new stdClass();
+                    $allparticipants->id = 0;
+                    array_unshift($allowedgroups, $allparticipants); // Add all participants.
+                } else {
+                    // User can only see the groups he belongs to.
+                    $allowedgroups = groups_get_all_groups($cm->course, $USER->id, $cm->groupingid);
+                }
+                foreach ($allowedgroups as $group) {
+                    $subwikis[] = wiki_get_possible_subwiki_by_group($wiki->id, $group->id, 0);
+                }
+            } else if ($wiki->wikimode == 'individual') {
+                // 1 subwiki per user and group.
+                if ($manage || $groupmode == VISIBLEGROUPS) {
+                    // User can view all subwikis.
+                    $users = get_enrolled_users($context);
+                    foreach ($users as $user) {
+                        // Get all the groups this user belongs to.
+                        $groups = groups_get_all_groups($cm->course, $user->id);
+                        if (!empty($groups)) {
+                            foreach ($groups as $group) {
+                                $subwikis[] = wiki_get_possible_subwiki_by_group($wiki->id, $group->id, $user->id);
+                            }
+                        } else {
+                            // User doesn't belong to any group, add it to group 0.
+                            $subwikis[] = wiki_get_possible_subwiki_by_group($wiki->id, 0, $user->id);
+                        }
+                    }
+                } else {
+                    // The user can only see the subwikis of the groups he belongs.
+                    $allowedgroups = groups_get_all_groups($cm->course, $USER->id, $cm->groupingid);
+                    foreach ($allowedgroups as $group) {
+                        $users = groups_get_members($group->id);
+                        foreach ($users as $user) {
+                            $subwikis[] = wiki_get_possible_subwiki_by_group($wiki->id, $group->id, $user->id);
+                        }
+                    }
+                }
+            }
+        }
+        return $subwikis;
+    }
+}
+
+/**
+ * Get pages list in wiki
+ * @param int $swid sub wiki id
+ * @param string $sort How to sort the pages. By default, title ASC.
+ */
+function local_mobile_wiki_get_page_list($swid, $sort = 'title ASC') {
+    global $DB;
+    $records = $DB->get_records('wiki_pages', array('subwikiid' => $swid), $sort);
+    return $records;
+}
+
+function local_mobile_external_format_text($text, $textformat, $contextid, $component, $filearea, $itemid, $options = null) {
+    global $CFG;
+    // Get settings (singleton).
+    $settings = external_settings::get_instance();
+    if ($settings->get_fileurl()) {
+        require_once($CFG->libdir . "/filelib.php");
+        $text = file_rewrite_pluginfile_urls($text, $settings->get_file(), $contextid, $component, $filearea, $itemid);
+    }
+    if (!$settings->get_raw()) {
+        $options = (array)$options;
+        $options['filter'] = isset($options['filter']) ? $options['filter'] : $settings->get_filter();
+        $options['para'] = isset($options['para']) ? $options['para'] : false;
+        $options['context'] = context::instance_by_id($contextid);
+        $options['allowid'] = isset($options['allowid']) ? $options['allowid'] : true;
+        $text = format_text($text, $textformat, $options);
+        $textformat = FORMAT_HTML; // Once converted to html (from markdown, plain... lets inform consumer this is already HTML).
+    }
+    return array($text, $textformat);
+}

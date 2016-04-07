@@ -7992,4 +7992,821 @@ class local_mobile_external extends external_api {
         ));
     }
 
+    /**
+     * Describes the parameters for get_wikis_by_courses.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_wikis_by_courses_parameters() {
+        return new external_function_parameters (
+            array(
+                'courseids' => new external_multiple_structure(
+                    new external_value(PARAM_INT, 'Course ID'), 'Array of course ids.', VALUE_DEFAULT, array()
+                ),
+            )
+        );
+    }
+
+    /**
+     * Returns a list of wikis in a provided list of courses,
+     * if no list is provided all wikis that the user can view will be returned.
+     *
+     * @param array $courseids The courses IDs.
+     * @return array Containing a list of warnings and a list of wikis.
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_wikis_by_courses($courseids = array()) {
+
+        $returnedwikis = array();
+        $warnings = array();
+
+        $params = self::validate_parameters(self::mod_wiki_get_wikis_by_courses_parameters(), array('courseids' => $courseids));
+
+        $mycourses = array();
+        if (empty($params['courseids'])) {
+            $mycourses = enrol_get_my_courses();
+            $params['courseids'] = array_keys($mycourses);
+        }
+
+        // Ensure there are courseids to loop through.
+        if (!empty($params['courseids'])) {
+
+            list($courses, $warnings) = external_util::validate_courses($params['courseids'], $mycourses);
+
+            // Get the wikis in this course, this function checks users visibility permissions.
+            // We can avoid then additional validate_context calls.
+            $wikis = get_all_instances_in_courses('wiki', $courses);
+
+            foreach ($wikis as $wiki) {
+
+                $context = context_module::instance($wiki->coursemodule);
+
+                // Entry to return.
+                $module = array();
+
+                // First, we return information that any user can see in (or can deduce from) the web interface.
+                $module['id'] = $wiki->id;
+                $module['coursemodule'] = $wiki->coursemodule;
+                $module['course'] = $wiki->course;
+                $module['name']  = external_format_string($wiki->name, $context->id);
+
+                $viewablefields = [];
+                if (has_capability('mod/wiki:viewpage', $context)) {
+                    list($module['intro'], $module['introformat']) =
+                        external_format_text($wiki->intro, $wiki->introformat, $context->id, 'mod_wiki', 'intro', $wiki->id);
+
+                    $viewablefields = array('firstpagetitle', 'wikimode', 'defaultformat', 'forceformat', 'editbegin', 'editend',
+                                            'section', 'visible', 'groupmode', 'groupingid');
+                }
+
+                // Check additional permissions for returning optional private settings.
+                if (has_capability('moodle/course:manageactivities', $context)) {
+                    $additionalfields = array('timecreated', 'timemodified');
+                    $viewablefields = array_merge($viewablefields, $additionalfields);
+                }
+
+                foreach ($viewablefields as $field) {
+                    $module[$field] = $wiki->{$field};
+                }
+
+                // Check if user can add new pages.
+                $module['cancreatepages'] = wiki_can_create_pages($context);
+
+                $returnedwikis[] = $module;
+            }
+        }
+
+        $result = array();
+        $result['wikis'] = $returnedwikis;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the get_wikis_by_courses return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_wikis_by_courses_returns() {
+
+        return new external_single_structure(
+            array(
+                'wikis' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Wiki ID.'),
+                            'coursemodule' => new external_value(PARAM_INT, 'Course module ID.'),
+                            'course' => new external_value(PARAM_INT, 'Course ID.'),
+                            'name' => new external_value(PARAM_RAW, 'Wiki name.'),
+                            'intro' => new external_value(PARAM_RAW, 'Wiki intro.', VALUE_OPTIONAL),
+                            'introformat' => new external_format_value('Wiki intro format.', VALUE_OPTIONAL),
+                            'timecreated' => new external_value(PARAM_INT, 'Time of creation.', VALUE_OPTIONAL),
+                            'timemodified' => new external_value(PARAM_INT, 'Time of last modification.', VALUE_OPTIONAL),
+                            'firstpagetitle' => new external_value(PARAM_RAW, 'First page title.', VALUE_OPTIONAL),
+                            'wikimode' => new external_value(PARAM_TEXT, 'Wiki mode (individual, collaborative).', VALUE_OPTIONAL),
+                            'defaultformat' => new external_value(PARAM_TEXT, 'Wiki\'s default format (html, creole, nwiki).',
+                                                                            VALUE_OPTIONAL),
+                            'forceformat' => new external_value(PARAM_INT, '1 if format is forced, 0 otherwise.',
+                                                                            VALUE_OPTIONAL),
+                            'editbegin' => new external_value(PARAM_INT, 'Edit begin.', VALUE_OPTIONAL),
+                            'editend' => new external_value(PARAM_INT, 'Edit end.', VALUE_OPTIONAL),
+                            'section' => new external_value(PARAM_INT, 'Course section ID.', VALUE_OPTIONAL),
+                            'visible' => new external_value(PARAM_INT, '1 if visible, 0 otherwise.', VALUE_OPTIONAL),
+                            'groupmode' => new external_value(PARAM_INT, 'Group mode.', VALUE_OPTIONAL),
+                            'groupingid' => new external_value(PARAM_INT, 'Group ID.', VALUE_OPTIONAL),
+                            'cancreatepages' => new external_value(PARAM_BOOL, 'True if user can create pages.'),
+                        ), 'Wikis'
+                    )
+                ),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for view_wiki.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_view_wiki_parameters() {
+        return new external_function_parameters (
+            array(
+                'wikiid' => new external_value(PARAM_INT, 'Wiki instance ID.')
+            )
+        );
+    }
+
+    /**
+     * Trigger the course module viewed event and update the module completion status.
+     *
+     * @param int $wikiid The wiki instance ID.
+     * @return array of warnings and status result.
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_view_wiki($wikiid) {
+
+        $params = self::validate_parameters(self::mod_wiki_view_wiki_parameters(),
+                                            array(
+                                                'wikiid' => $wikiid
+                                            ));
+        $warnings = array();
+
+        // Get wiki instance.
+        if (!$wiki = wiki_get_wiki($params['wikiid'])) {
+            throw new moodle_exception('incorrectwikiid', 'wiki');
+        }
+
+        // Permission validation.
+        list($course, $cm) = get_course_and_cm_from_instance($wiki, 'wiki');
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // Check if user can view this wiki.
+        // We don't use wiki_user_can_view because it requires to have a valid subwiki for the user.
+        if (!has_capability('mod/wiki:viewpage', $context)) {
+            throw new moodle_exception('cannotviewpage', 'wiki');
+        }
+
+        // Trigger course_module_viewed event and completion.
+        wiki_view($wiki, $course, $cm, $context);
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the view_wiki return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_view_wiki_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'Status: true if success.'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for view_page.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_view_page_parameters() {
+        return new external_function_parameters (
+            array(
+                'pageid' => new external_value(PARAM_INT, 'Wiki page ID.'),
+            )
+        );
+    }
+
+    /**
+     * Trigger the page viewed event and update the module completion status.
+     *
+     * @param int $pageid The page ID.
+     * @return array of warnings and status result.
+     * @since Moodle 3.1
+     * @throws moodle_exception if page is not valid.
+     */
+    public static function mod_wiki_view_page($pageid) {
+
+        $params = self::mod_wiki_validate_parameters(self::view_page_parameters(),
+                                            array(
+                                                'pageid' => $pageid
+                                            ));
+        $warnings = array();
+
+        // Get wiki page.
+        if (!$page = wiki_get_page($params['pageid'])) {
+            throw new moodle_exception('incorrectpageid', 'wiki');
+        }
+
+        // Get wiki instance.
+        if (!$wiki = wiki_get_wiki_from_pageid($params['pageid'])) {
+            throw new moodle_exception('incorrectwikiid', 'wiki');
+        }
+
+        // Permission validation.
+        list($course, $cm) = get_course_and_cm_from_instance($wiki, 'wiki');
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // Check if user can view this wiki.
+        if (!$subwiki = wiki_get_subwiki($page->subwikiid)) {
+            throw new moodle_exception('incorrectsubwikiid', 'wiki');
+        }
+        if (!wiki_user_can_view($subwiki, $wiki)) {
+            throw new moodle_exception('cannotviewpage', 'wiki');
+        }
+
+        // Trigger page_viewed event and completion.
+        wiki_page_view($wiki, $page, $course, $cm, $context);
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the view_page return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_view_page_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'Status: true if success.'),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_subwikis.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwikis_parameters() {
+        return new external_function_parameters (
+            array(
+                'wikiid' => new external_value(PARAM_INT, 'Wiki instance ID.')
+            )
+        );
+    }
+
+    /**
+     * Returns the list of subwikis the user can see in a specific wiki.
+     *
+     * @param int $wikiid The wiki instance ID.
+     * @return array Containing a list of warnings and a list of subwikis.
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwikis($wikiid) {
+        global $USER;
+
+        $warnings = array();
+
+        $params = self::validate_parameters(self::mod_wiki_get_subwikis_parameters(), array('wikiid' => $wikiid));
+
+        // Get wiki instance.
+        if (!$wiki = wiki_get_wiki($params['wikiid'])) {
+            throw new moodle_exception('incorrectwikiid', 'wiki');
+        }
+
+        // Validate context and capabilities.
+        list($course, $cm) = get_course_and_cm_from_instance($wiki, 'wiki');
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+        require_capability('mod/wiki:viewpage', $context);
+
+        $returnedsubwikis = wiki_get_visible_subwikis($wiki, $cm, $context);
+        foreach ($returnedsubwikis as $subwiki) {
+            $subwiki->canedit = wiki_user_can_edit($subwiki);
+        }
+
+        $result = array();
+        $result['subwikis'] = $returnedsubwikis;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the get_subwikis return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwikis_returns() {
+        return new external_single_structure(
+            array(
+                'subwikis' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Subwiki ID.'),
+                            'wikiid' => new external_value(PARAM_INT, 'Wiki ID.'),
+                            'groupid' => new external_value(PARAM_RAW, 'Group ID.'),
+                            'userid' => new external_value(PARAM_INT, 'User ID.'),
+                            'canedit' => new external_value(PARAM_BOOL, 'True if user can edit the subwiki.'),
+                        ), 'Subwikis'
+                    )
+                ),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_subwiki_pages.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwiki_pages_parameters() {
+        return new external_function_parameters (
+            array(
+                'wikiid' => new external_value(PARAM_INT, 'Wiki instance ID.'),
+                'groupid' => new external_value(PARAM_INT, 'Subwiki\'s group ID, -1 means current group. It will be ignored'
+                                        . ' if the wiki doesn\'t use groups.', VALUE_DEFAULT, -1),
+                'userid' => new external_value(PARAM_INT, 'Subwiki\'s user ID, 0 means current user. It will be ignored'
+                                        .' in collaborative wikis.', VALUE_DEFAULT, 0),
+                'options' => new external_single_structure(
+                            array(
+                                    'sortby' => new external_value(PARAM_ALPHA,
+                                            'Field to sort by (id, title, ...).', VALUE_DEFAULT, 'title'),
+                                    'sortdirection' => new external_value(PARAM_ALPHA,
+                                            'Sort direction: ASC or DESC.', VALUE_DEFAULT, 'ASC'),
+                                    'includecontent' => new external_value(PARAM_INT,
+                                            'Include each page contents or not.', VALUE_DEFAULT, 1),
+                            ), 'Options', VALUE_DEFAULT, array()),
+            )
+        );
+    }
+
+    /**
+     * Returns the list of pages from a specific subwiki.
+     *
+     * @param int $wikiid The wiki instance ID.
+     * @param int $groupid The group ID. If not defined, use current group.
+     * @param int $userid The user ID. If not defined, use current user.
+     * @param array $options Several options like sort by, sort direction, ...
+     * @return array Containing a list of warnings and a list of pages.
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwiki_pages($wikiid, $groupid = -1, $userid = 0, $options = array()) {
+        global $USER, $DB;
+
+        $returnedpages = array();
+        $warnings = array();
+
+        $params = self::validate_parameters(self::mod_wiki_get_subwiki_pages_parameters(),
+                                            array(
+                                                'wikiid' => $wikiid,
+                                                'groupid' => $groupid,
+                                                'userid' => $userid,
+                                                'options' => $options
+                                                )
+            );
+
+        // Get wiki instance.
+        if (!$wiki = wiki_get_wiki($params['wikiid'])) {
+            throw new moodle_exception('incorrectwikiid', 'wiki');
+        }
+        list($course, $cm) = get_course_and_cm_from_instance($wiki, 'wiki');
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // Determine groupid and userid to use.
+        list($groupid, $userid) = self::mod_wiki_determine_group_and_user($cm, $wiki, $params['groupid'], $params['userid']);
+
+        // Get subwiki and validate it.
+        $subwiki = self::mod_wiki_get_subwiki($cm, $wiki, $groupid, $userid);
+
+        if ($subwiki->id != -1) {
+
+            // Set sort param.
+            $options = $params['options'];
+            if (!empty($options['sortby'])) {
+                if ($options['sortdirection'] != 'ASC' && $options['sortdirection'] != 'DESC') {
+                    // Invalid sort direction. Use default.
+                    $options['sortdirection'] = 'ASC';
+                }
+                $sort = $options['sortby'] . ' ' . $options['sortdirection'];
+            }
+
+            $pages = wiki_get_page_list($subwiki->id, $sort);
+            $caneditpages = wiki_user_can_edit($subwiki);
+            $firstpage = wiki_get_first_page($subwiki->id);
+
+            foreach ($pages as $page) {
+                $retpage = array(
+                        'id' => $page->id,
+                        'subwikiid' => $page->subwikiid,
+                        'title' => external_format_string($page->title, $context->id),
+                        'timecreated' => $page->timecreated,
+                        'timemodified' => $page->timemodified,
+                        'timerendered' => $page->timerendered,
+                        'userid' => $page->userid,
+                        'pageviews' => $page->pageviews,
+                        'readonly' => $page->readonly,
+                        'caneditpage' => $caneditpages,
+                        'firstpage' => $page->id == $firstpage->id
+                    );
+
+                // Refresh page cached content if needed.
+                if ($page->timerendered + WIKI_REFRESH_CACHE_TIME < time()) {
+                    if ($content = wiki_refresh_cachedcontent($page)) {
+                        $page = $content['page'];
+                    }
+                }
+                list($cachedcontent, $contentformat) = external_format_text(
+                            $page->cachedcontent, FORMAT_HTML, $context->id, 'mod_wiki', 'attachments', $subwiki->id);
+
+                if ($options['includecontent']) {
+                    // Return the page content.
+                    $retpage['cachedcontent'] = $cachedcontent;
+                    $retpage['contentformat'] = $contentformat;
+                } else {
+                    // Return the size of the content.
+                    if (function_exists('mb_strlen') && ((int)ini_get('mbstring.func_overload') & 2)) {
+                        $retpage['contentsize'] = mb_strlen($cachedcontent, '8bit');
+                    } else {
+                        $retpage['contentsize'] = strlen($cachedcontent);
+                    }
+                }
+
+                $returnedpages[] = $retpage;
+            }
+        }
+
+        $result = array();
+        $result['pages'] = $returnedpages;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the get_subwiki_pages return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwiki_pages_returns() {
+
+        return new external_single_structure(
+            array(
+                'pages' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'id' => new external_value(PARAM_INT, 'Page ID.'),
+                            'subwikiid' => new external_value(PARAM_INT, 'Page\'s subwiki ID.'),
+                            'title' => new external_value(PARAM_RAW, 'Page title.'),
+                            'timecreated' => new external_value(PARAM_INT, 'Time of creation.'),
+                            'timemodified' => new external_value(PARAM_INT, 'Time of last modification.'),
+                            'timerendered' => new external_value(PARAM_INT, 'Time of last renderization.'),
+                            'userid' => new external_value(PARAM_INT, 'ID of the user that last modified the page.'),
+                            'pageviews' => new external_value(PARAM_INT, 'Number of times the page has been viewed.'),
+                            'readonly' => new external_value(PARAM_INT, '1 if readonly, 0 otherwise.'),
+                            'caneditpage' => new external_value(PARAM_BOOL, 'True if user can edit the page.'),
+                            'firstpage' => new external_value(PARAM_BOOL, 'True if it\'s the first page.'),
+                            'cachedcontent' => new external_value(PARAM_RAW, 'Page contents.', VALUE_OPTIONAL),
+                            'contentformat' => new external_format_value('cachedcontent', VALUE_OPTIONAL),
+                            'contentsize' => new external_value(PARAM_INT, 'Size of page contents in bytes (doesn\'t include'.
+                                                                            ' size of attached files).', VALUE_OPTIONAL),
+                        ), 'Pages'
+                    )
+                ),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_page_contents.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_page_contents_parameters() {
+        return new external_function_parameters (
+            array(
+                'pageid' => new external_value(PARAM_INT, 'Page ID.')
+            )
+        );
+    }
+
+    /**
+     * Get a page contents.
+     *
+     * @param int $pageid The page ID.
+     * @return array of warnings and page data.
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_page_contents($pageid) {
+
+        $params = self::validate_parameters(self::mod_wiki_get_page_contents_parameters(),
+                                            array(
+                                                'pageid' => $pageid
+                                            )
+            );
+        $warnings = array();
+
+        // Get wiki page.
+        if (!$page = wiki_get_page($params['pageid'])) {
+            throw new moodle_exception('incorrectpageid', 'wiki');
+        }
+
+        // Get wiki instance.
+        if (!$wiki = wiki_get_wiki_from_pageid($params['pageid'])) {
+            throw new moodle_exception('incorrectwikiid', 'wiki');
+        }
+
+        // Permission validation.
+        $cm = get_coursemodule_from_instance('wiki', $wiki->id, $wiki->course);
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // Check if user can view this wiki.
+        if (!$subwiki = wiki_get_subwiki($page->subwikiid)) {
+            throw new moodle_exception('incorrectsubwikiid', 'wiki');
+        }
+        if (!wiki_user_can_view($subwiki, $wiki)) {
+            throw new moodle_exception('cannotviewpage', 'wiki');
+        }
+
+        $returnedpage = array();
+        $returnedpage['id'] = $page->id;
+        $returnedpage['wikiid'] = $wiki->id;
+        $returnedpage['subwikiid'] = $page->subwikiid;
+        $returnedpage['groupid'] = $subwiki->groupid;
+        $returnedpage['userid'] = $subwiki->userid;
+        $returnedpage['title'] = $page->title;
+
+        // Refresh page cached content if needed.
+        if ($page->timerendered + WIKI_REFRESH_CACHE_TIME < time()) {
+            if ($content = wiki_refresh_cachedcontent($page)) {
+                $page = $content['page'];
+            }
+        }
+
+        list($returnedpage['cachedcontent'], $returnedpage['contentformat']) = local_mobile_external_format_text(
+                            $page->cachedcontent, FORMAT_HTML, $context->id, 'mod_wiki', 'attachments', $subwiki->id);
+        $returnedpage['caneditpage'] = wiki_user_can_edit($subwiki);
+
+        $result = array();
+        $result['page'] = $returnedpage;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the get_page_contents return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_page_contents_returns() {
+        return new external_single_structure(
+            array(
+                'page' => new external_single_structure(
+                    array(
+                        'id' => new external_value(PARAM_INT, 'Page ID.'),
+                        'wikiid' => new external_value(PARAM_INT, 'Page\'s wiki ID.'),
+                        'subwikiid' => new external_value(PARAM_INT, 'Page\'s subwiki ID.'),
+                        'groupid' => new external_value(PARAM_INT, 'Page\'s group ID.'),
+                        'userid' => new external_value(PARAM_INT, 'Page\'s user ID.'),
+                        'title' => new external_value(PARAM_RAW, 'Page title.'),
+                        'cachedcontent' => new external_value(PARAM_RAW, 'Page contents.'),
+                        'contentformat' => new external_format_value('cachedcontent', VALUE_OPTIONAL),
+                        'caneditpage' => new external_value(PARAM_BOOL, 'True if user can edit the page.')
+                    ), 'Page'
+                ),
+                'warnings' => new external_warnings()
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for get_subwiki_files.
+     *
+     * @return external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwiki_files_parameters() {
+        return new external_function_parameters (
+            array(
+                'wikiid' => new external_value(PARAM_INT, 'Wiki instance ID.'),
+                'groupid' => new external_value(PARAM_INT, 'Subwiki\'s group ID, -1 means current group. It will be ignored'
+                                        . ' if the wiki doesn\'t use groups.', VALUE_DEFAULT, -1),
+                'userid' => new external_value(PARAM_INT, 'Subwiki\'s user ID, 0 means current user. It will be ignored'
+                                        .' in collaborative wikis.', VALUE_DEFAULT, 0)
+            )
+        );
+    }
+
+    /**
+     * Returns the list of files from a specific subwiki.
+     *
+     * @param int $wikiid The wiki instance ID.
+     * @param int $groupid The group ID. If not defined, use current group.
+     * @param int $userid The user ID. If not defined, use current user.
+     * @return array Containing a list of warnings and a list of files.
+     * @since Moodle 3.1
+     * @throws moodle_exception
+     */
+    public static function mod_wiki_get_subwiki_files($wikiid, $groupid = -1, $userid = 0) {
+
+        $returnedfiles = array();
+        $warnings = array();
+
+        $params = self::validate_parameters(self::mod_wiki_get_subwiki_files_parameters(),
+                                            array(
+                                                'wikiid' => $wikiid,
+                                                'groupid' => $groupid,
+                                                'userid' => $userid
+                                                )
+            );
+
+        // Get wiki instance.
+        if (!$wiki = wiki_get_wiki($params['wikiid'])) {
+            throw new moodle_exception('incorrectwikiid', 'wiki');
+        }
+        list($course, $cm) = get_course_and_cm_from_instance($wiki, 'wiki');
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        // Determine groupid and userid to use.
+        list($groupid, $userid) = self::mod_wiki_determine_group_and_user($cm, $wiki, $params['groupid'], $params['userid']);
+
+        // Get subwiki and validate it.
+        $subwiki = self::mod_wiki_get_subwiki($cm, $wiki, $groupid, $userid, 'cannotviewfiles');
+
+        // Get subwiki based on group and user.
+        if ($subwiki->id != -1) {
+            // The subwiki exists, let's get the files.
+            $fs = get_file_storage();
+            if ($files = $fs->get_area_files($context->id, 'mod_wiki', 'attachments', $subwiki->id, 'filename', false)) {
+                foreach ($files as $file) {
+                    $filename = $file->get_filename();
+                    $fileurl = moodle_url::make_webservice_pluginfile_url(
+                                    $context->id, 'mod_wiki', 'attachments', $subwiki->id, '/', $filename);
+
+                    $returnedfiles[] = array(
+                        'filename' => $filename,
+                        'mimetype' => $file->get_mimetype(),
+                        'fileurl'  => $fileurl->out(false),
+                        'filepath' => $file->get_filepath(),
+                        'filesize' => $file->get_filesize(),
+                        'timemodified' => $file->get_timemodified()
+                    );
+                }
+            }
+        }
+
+        $result = array();
+        $result['files'] = $returnedfiles;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the get_subwiki_pages return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_wiki_get_subwiki_files_returns() {
+
+        return new external_single_structure(
+            array(
+                'files' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'filename' => new external_value(PARAM_FILE, 'File name.'),
+                            'filepath' => new external_value(PARAM_PATH, 'File path.'),
+                            'filesize' => new external_value(PARAM_INT, 'File size.'),
+                            'fileurl' => new external_value(PARAM_URL, 'Downloadable file url.'),
+                            'timemodified' => new external_value(PARAM_INT, 'Time modified.'),
+                            'mimetype' => new external_value(PARAM_RAW, 'File mime type.'),
+                        ), 'Files'
+                    )
+                ),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Utility function for determining the groupid and userid to use.
+     *
+     * @param stdClass $cm The course module.
+     * @param stdClass $wiki The wiki.
+     * @param int $groupid Group ID.
+     * @param int $userid User ID.
+     * @return array Array containing the courseid and userid.
+     * @since  Moodle 3.1
+     */
+    protected static function mod_wiki_determine_group_and_user($cm, $wiki, $groupid, $userid) {
+        global $USER;
+
+        $groupmode = groups_get_activity_groupmode($cm);
+        if ($groupmode == NOGROUPS) {
+            $groupid = 0;
+        } else if ($groupid == -1) {
+            // Use current group.
+            $groupid = groups_get_activity_group($cm);
+            $groupid = !empty($groupid) ? $groupid : 0;
+        }
+
+        // Determine user.
+        if ($wiki->wikimode == 'collaborative') {
+            // Collaborative wikis don't use userid in subwikis.
+            $userid = 0;
+        } else if (empty($userid)) {
+            // Use current user.
+            $userid = $USER->id;
+        }
+
+        return array($groupid, $userid);
+    }
+
+    /**
+     * Utility function for getting a subwiki by group and user, validating that the user can view it.
+     * If the subwiki doesn't exists in DB yet it'll have id -1.
+     *
+     * @param stdClass $cm The course module.
+     * @param stdClass $wiki The wiki.
+     * @param int $groupid Group ID. 0 means the subwiki doesn't use groups.
+     * @param int $userid User ID. 0 means the subwiki doesn't use users.
+     * @param string $error Error to show if the user cannot view the subwiki. By default, 'cannotviewpage'.
+     * @param string $errormodule Module to get the error message from. By default, 'wiki'.
+     * @return stdClass Subwiki. If it doesn't exists in DB yet it'll have id -1.
+     * @since  Moodle 3.1
+     * @throws moodle_exception
+     */
+    protected static function mod_wiki_get_subwiki($cm, $wiki, $groupid, $userid, $error = 'cannotviewpage', $errormodule = 'wiki') {
+        global $USER, $DB;
+
+        // Get subwiki based on group and user.
+        if (!$subwiki = wiki_get_subwiki_by_group($cm->instance, $groupid, $userid)) {
+
+            // The subwiki doesn't exist.
+            // Validate if user is valid.
+            if ($userid != 0) {
+                $user = core_user::get_user($userid, '*', MUST_EXIST);
+                core_user::require_active_user($user);
+            }
+
+            // Validate that groupid is valid.
+            if ($groupid != 0 && !groups_group_exists($groupid)) {
+                throw new moodle_exception('cannotfindgroup', 'error');
+            }
+
+            // Valid data but subwiki not found. We'll simulate a subwiki object to check if the user would be able to see it
+            // if it existed. If he's able to see it then we'll return an empty array because the subwiki has no pages.
+            $subwiki = new stdClass();
+            $subwiki->id = -1;
+            $subwiki->wikiid = $wiki->id;
+            $subwiki->userid = $userid;
+            $subwiki->groupid = $groupid;
+        }
+
+        // Check that the user can view the subwiki. This function checks capabilities.
+        if (!wiki_user_can_view($subwiki, $wiki)) {
+            throw new moodle_exception($error, $errormodule);
+        }
+
+        return $subwiki;
+    }
+
 }
