@@ -2096,7 +2096,7 @@ class local_mobile_external extends external_api {
                     );
 
                 // Refresh page cached content if needed.
-                if ($page->timerendered  WIKI_REFRESH_CACHE_TIME < time()) {
+                if ($page->timerendered + WIKI_REFRESH_CACHE_TIME < time()) {
                     if ($content = wiki_refresh_cachedcontent($page)) {
                         $page = $content['page'];
                     }
