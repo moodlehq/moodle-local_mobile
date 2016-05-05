@@ -26,6 +26,7 @@ require_once(dirname(__FILE__) . '/../../config.php');
 
 $serviceshortname  = required_param('service',  PARAM_ALPHANUMEXT);
 $passport          = required_param('passport',  PARAM_RAW);    // Passport send from the app to validate the response URL.
+$urlscheme         = optional_param('urlscheme', 'moodlemobile', PARAM_NOTAGS);
 
 // If the user is not logged, this will redirect him to the login page.
 // Once logged, it will be redirected again to this page and the app launched.
@@ -167,9 +168,9 @@ $siteid = md5($CFG->wwwroot . $passport);   // Passport is used here as salt.
 $apptoken = base64_encode($siteid . ':::' . $token->token);
 
 // Redirect using the custom URL scheme.
-$urlscheme = get_config('local_mobile', 'urlscheme');
-if (empty($urlscheme)) {
-    $urlscheme = 'moodlemobile';
+$forcedurlscheme = get_config('local_mobile', 'urlscheme');
+if (!empty($forcedurlscheme)) {
+    $urlscheme = $forcedurlscheme;
 }
 $location = "Location: $urlscheme://token=$apptoken";
 header($location);
