@@ -40,7 +40,7 @@ if ($hassiteconfig) {
 
     $settings->add(new admin_setting_configtext('local_mobile/urlscheme',
                         get_string('local_mobileurlscheme_key', 'local_mobile'),
-                        get_string('local_mobileurlscheme', 'local_mobile'), 'moodlemobile', PARAM_ALPHA));
+                        get_string('local_mobileurlscheme', 'local_mobile'), '', PARAM_NOTAGS));
 
     $url = new moodle_url('/local/mobile/checkconfiguration.php', array('sesskey' => sesskey()));
     $link = html_writer::link($url, get_string('checkpluginconfiguration', 'local_mobile'));
