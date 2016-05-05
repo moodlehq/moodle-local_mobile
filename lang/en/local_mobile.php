@@ -29,7 +29,7 @@ $string['pluginnotenabledorconfigured'] = 'The Moodle Mobile local plugin must b
 $string['local_mobilesettings'] = 'Settings';
 $string['local_mobiletypeoflogin'] = 'Choose the type of login';
 $string['local_mobiletypeoflogin_key'] = 'Type of login';
-$string['local_mobileurlscheme'] = 'URL scheme for login via a browser window.';
+$string['local_mobileurlscheme'] = 'Use this setting to force the URL scheme for login via a browser window. In most of the cases it should be left empty.';
 $string['local_mobileurlscheme_key'] = 'URL scheme';
 
 $string['loginintheapp'] = 'Via the app';
