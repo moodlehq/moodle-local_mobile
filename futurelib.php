@@ -155,7 +155,7 @@ if (!class_exists("external_util")) {
          * @param  array $courseids A list of course ids
          * @return array            An array of courses and the validation warnings
          */
-        public static function validate_courses($courseids) {
+        public static function validate_courses($courseids, $notused = array()) {
             // Delete duplicates.
             $courseids = array_unique($courseids);
             $courses = array();
