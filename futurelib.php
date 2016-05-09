@@ -2650,3 +2650,39 @@ class local_mobile_question_bank extends question_bank {
         return $qtypes;
     }
 }
+
+/**
+ * Check if the given user is an active user in the site.
+ *
+ * @param  stdClass  $user         user object
+ * @param  boolean $checksuspended whether to check if the user has the account suspended
+ * @param  boolean $checknologin   whether to check if the user uses the nologin auth method
+ * @throws moodle_exception
+ * @since  Moodle 3.0
+ */
+function local_mobile_require_active_user($user, $checksuspended = false, $checknologin = false) {
+
+    if (!core_user::is_real_user($user->id)) {
+        throw new moodle_exception('invaliduser', 'error');
+    }
+
+    if ($user->deleted) {
+        throw new moodle_exception('userdeleted');
+    }
+
+    if (empty($user->confirmed)) {
+        throw new moodle_exception('usernotconfirmed', 'moodle', '', $user->username);
+    }
+
+    if (isguestuser($user)) {
+        throw new moodle_exception('guestsarenotallowed', 'error');
+    }
+
+    if ($checksuspended and $user->suspended) {
+        throw new moodle_exception('suspended', 'auth');
+    }
+
+    if ($checknologin and $user->auth == 'nologin') {
+        throw new moodle_exception('suspended', 'auth');
+    }
+}
