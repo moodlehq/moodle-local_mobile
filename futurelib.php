@@ -1596,7 +1596,7 @@ class local_mobile_quiz extends quiz {
                     $categoriestolook[] = $cat;
                 }
             }
-            $questiontypesincategories = question_bank::get_all_question_types_in_categories($categoriestolook);
+            $questiontypesincategories = local_mobile_question_bank::get_all_question_types_in_categories($categoriestolook);
             $questiontypes = array_merge($questiontypes, $questiontypesincategories);
         }
         $questiontypes = array_unique($questiontypes);
@@ -1921,5 +1921,26 @@ class local_mobile_quiz_access_manager extends quiz_access_manager {
             }
         }
         return $errors;
+    }
+}
+
+class local_mobile_question_bank extends question_bank {
+    /**
+     * Return a list of the different question types present in the given categories.
+     *
+     * @param  array $categories a list of category ids
+     * @return array the list of question types in the categories
+     * @since  Moodle 3.1
+     */
+    public static function get_all_question_types_in_categories($categories) {
+        global $DB;
+
+        list($categorysql, $params) = $DB->get_in_or_equal($categories);
+        $sql = "SELECT DISTINCT q.qtype
+                FROM {question} q
+                WHERE q.category $categorysql";
+
+        $qtypes = $DB->get_fieldset_sql($sql, $params);
+        return $qtypes;
     }
 }
