@@ -2440,7 +2440,7 @@ class local_mobile_quiz extends quiz {
                     $categoriestolook[] = $cat;
                 }
             }
-            $questiontypesincategories = question_bank::get_all_question_types_in_categories($categoriestolook);
+            $questiontypesincategories = local_mobile_question_bank::get_all_question_types_in_categories($categoriestolook);
             $questiontypes = array_merge($questiontypes, $questiontypesincategories);
         }
         $questiontypes = array_unique($questiontypes);
@@ -2765,5 +2765,62 @@ class local_mobile_quiz_access_manager extends quiz_access_manager {
             }
         }
         return $errors;
+    }
+}
+
+class local_mobile_question_bank extends question_bank {
+    /**
+     * Return a list of the different question types present in the given categories.
+     *
+     * @param  array $categories a list of category ids
+     * @return array the list of question types in the categories
+     * @since  Moodle 3.1
+     */
+    public static function get_all_question_types_in_categories($categories) {
+        global $DB;
+
+        list($categorysql, $params) = $DB->get_in_or_equal($categories);
+        $sql = "SELECT DISTINCT q.qtype
+                FROM {question} q
+                WHERE q.category $categorysql";
+
+        $qtypes = $DB->get_fieldset_sql($sql, $params);
+        return $qtypes;
+    }
+}
+
+/**
+ * Check if the given user is an active user in the site.
+ *
+ * @param  stdClass  $user         user object
+ * @param  boolean $checksuspended whether to check if the user has the account suspended
+ * @param  boolean $checknologin   whether to check if the user uses the nologin auth method
+ * @throws moodle_exception
+ * @since  Moodle 3.0
+ */
+function local_mobile_require_active_user($user, $checksuspended = false, $checknologin = false) {
+
+    if (!core_user::is_real_user($user->id)) {
+        throw new moodle_exception('invaliduser', 'error');
+    }
+
+    if ($user->deleted) {
+        throw new moodle_exception('userdeleted');
+    }
+
+    if (empty($user->confirmed)) {
+        throw new moodle_exception('usernotconfirmed', 'moodle', '', $user->username);
+    }
+
+    if (isguestuser($user)) {
+        throw new moodle_exception('guestsarenotallowed', 'error');
+    }
+
+    if ($checksuspended and $user->suspended) {
+        throw new moodle_exception('suspended', 'auth');
+    }
+
+    if ($checknologin and $user->auth == 'nologin') {
+        throw new moodle_exception('suspended', 'auth');
     }
 }
