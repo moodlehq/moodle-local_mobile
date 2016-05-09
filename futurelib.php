@@ -2848,6 +2848,42 @@ class local_mobile_quiz_attempt extends quiz_attempt {
         return $this->quba->get_question_state($slot);
     }
 
+    private function determine_layout() {
+        $this->pagelayout = array();
+        // Break up the layout string into pages.
+        $pagelayouts = explode(',0', $this->attempt->layout);
+        // Strip off any empty last page (normally there is one).
+        if (end($pagelayouts) == '') {
+            array_pop($pagelayouts);
+        }
+        // File the ids into the arrays.
+        $this->pagelayout = array();
+        foreach ($pagelayouts as $page => $pagelayout) {
+            $pagelayout = trim($pagelayout, ',');
+            if ($pagelayout == '') {
+                continue;
+            }
+            $this->pagelayout[$page] = explode(',', $pagelayout);
+        }
+    }
+
+    // Number the questions.
+    private function number_questions() {
+        $number = 1;
+        foreach ($this->pagelayout as $page => $slots) {
+            foreach ($slots as $slot) {
+                $question = $this->quba->get_question($slot);
+                if ($question->length > 0) {
+                    $this->questionnumbers[$slot] = $number;
+                    $number += $question->length;
+                } else {
+                    $this->questionnumbers[$slot] = get_string('infoshort', 'quiz');
+                }
+                $this->questionpages[$slot] = $page;
+            }
+        }
+    }
+
 }
 
 class local_mobile_quiz_access_manager extends quiz_access_manager {
