@@ -8784,7 +8784,7 @@ class local_mobile_external extends external_api {
             // Validate if user is valid.
             if ($userid != 0) {
                 $user = core_user::get_user($userid, '*', MUST_EXIST);
-                core_user::require_active_user($user);
+                local_mobile_require_active_user($user);
             }
 
             // Validate that groupid is valid.
@@ -9170,7 +9170,7 @@ class local_mobile_external extends external_api {
         }
 
         $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
-        core_user::require_active_user($user);
+        local_mobile_require_active_user($user);
 
         // Extra checks so only users with permissions can view other users attempts.
         if ($USER->id != $user->id) {
@@ -9276,7 +9276,7 @@ class local_mobile_external extends external_api {
         }
 
         $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
-        core_user::require_active_user($user);
+        local_mobile_require_active_user($user);
 
         // Extra checks so only users with permissions can view other users attempts.
         if ($USER->id != $user->id) {
@@ -9355,7 +9355,7 @@ class local_mobile_external extends external_api {
         }
 
         $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
-        core_user::require_active_user($user);
+        local_mobile_require_active_user($user);
 
         // Extra checks so only users with permissions can view other users attempts.
         if ($USER->id != $user->id) {
