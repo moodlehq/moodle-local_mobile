@@ -9159,6 +9159,7 @@ class local_mobile_external extends external_api {
                 }
             }
             $attempt = quiz_prepare_and_start_new_attempt($quizobj, $attemptnumber, $lastattempt);
+            $attempt->currentpage = 0;
         }
 
         $result = array();
