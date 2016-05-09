@@ -2473,13 +2473,7 @@ class local_mobile_quiz_attempt extends quiz_attempt {
         }
 
         $this->quba = question_engine::load_questions_usage_by_activity($this->attempt->uniqueid);
-        $this->slots = $DB->get_records('quiz_slots',
-                array('quizid' => $this->get_quizid()), 'slot',
-                'slot, requireprevious, questionid');
-        $this->sections = array_values($DB->get_records('quiz_sections',
-                array('quizid' => $this->get_quizid()), 'firstslot'));
 
-        $this->link_sections_and_slots();
         $this->determine_layout();
         $this->number_questions();
     }
@@ -2743,6 +2737,18 @@ class local_mobile_quiz_attempt extends quiz_attempt {
         $event->add_record_snapshot('quiz_attempts', $this->get_attempt());
         $event->trigger();
     }
+
+    /**
+     * Return the {@link question_state} that this question is in.
+     *
+     * @param int $slot the number used to identify this question within this attempt.
+     * @return question_state the state this question is in.
+     * @since Moodle 2.9
+     */
+    public function get_question_state($slot) {
+        return $this->quba->get_question_state($slot);
+    }
+
 }
 
 class local_mobile_quiz_access_manager extends quiz_access_manager {
