@@ -101,6 +101,7 @@ $services = array(
             'message_airnotifier_are_notification_preferences_configured',
             'message_airnotifier_is_system_configured',
             'mod_assign_get_assignments',
+            'mod_assign_get_submission_status',
             'mod_assign_get_submissions',
             'mod_assign_view_grading_table',
             'mod_book_view_book',
