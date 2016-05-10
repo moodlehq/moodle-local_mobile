@@ -446,6 +446,8 @@ $services = array(
             'message_airnotifier_is_system_configured',
             'mod_assign_get_assignments',
             'mod_assign_get_submissions',
+            'mod_assign_save_submission',
+            'mod_assign_submit_for_grading',
             'mod_assign_view_grading_table',
             'mod_book_view_book',
             'mod_chat_get_chat_latest_messages',
