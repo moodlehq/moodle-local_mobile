@@ -1516,6 +1516,29 @@ if (!function_exists('quiz_prepare_and_start_new_attempt')) {
     }
 }
 
+if (!function_exists('quiz_feedback_record_for_grade')) {
+    /**
+     * Get the feedback object for this grade on this quiz.
+     *
+     * @param float $grade a grade on this quiz.
+     * @param object $quiz the quiz settings.
+     * @return false|stdClass the record object or false if there is not feedback for the given grade
+     * @since  Moodle 3.1
+     */
+    function quiz_feedback_record_for_grade($grade, $quiz) {
+        global $DB;
+
+        // With CBM etc, it is possible to get -ve grades, which would then not match
+        // any feedback. Therefore, we replace -ve grades with 0.
+        $grade = max($grade, 0);
+
+        $feedback = $DB->get_record_select('quiz_feedback',
+                'quizid = ? AND mingrade <= ? AND ? < maxgrade', array($quiz->id, $grade, $grade));
+
+        return $feedback;
+    }
+}
+
 class local_mobile_quiz extends quiz {
 
     /**
