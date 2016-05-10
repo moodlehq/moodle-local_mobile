@@ -37,6 +37,7 @@ $functions = array(
 $services = array(
    'Moodle Mobile additional features service'  => array(
         'functions' => array (
+            'core_badges_get_user_badges',
             'core_calendar_get_calendar_events',
             'core_comment_get_comments',
             'core_competency_list_course_competencies',
@@ -169,6 +170,7 @@ $services = array(
             'mod_scorm_get_scorm_user_data',
             'mod_scorm_get_scorms_by_courses',
             'mod_scorm_insert_scorm_tracks',
+            'mod_scorm_launch_sco',
             'mod_scorm_view_scorm',
             'mod_survey_get_questions',
             'mod_survey_get_surveys_by_courses',
@@ -194,6 +196,7 @@ $services = array(
             'tool_lp_data_for_user_competency_summary_in_plan',
             'tool_lp_data_for_user_competency_summary_in_course',
             'tool_lp_data_for_course_competencies_page',
+            'tool_mobile_get_plugins_supporting_mobile',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
