@@ -6940,7 +6940,7 @@ class local_mobile_external extends external_api {
      * @since Moodle 3.1
      */
     public static function mod_quiz_get_quizzes_by_courses($courseids = array()) {
-        global $USER;
+        global $USER, $DB;
 
         $warnings = array();
         $returnedquizzes = array();
@@ -7017,6 +7017,23 @@ class local_mobile_external extends external_api {
 
                     foreach ($viewablefields as $field) {
                         $quizdetails[$field] = $quiz->{$field};
+                    }
+
+                    // Return the password hashed with SHA1 for non-managers.
+                    if (!empty($quiz->password) and empty($quizdetails['password'])) {
+                        $quizdetails['password'] = sha1($quiz->password);
+                    }
+
+                    // Check for allow offline attempts.
+                    $quizdetails['allowofflineattempts'] = 0;
+
+                    $dbman = $DB->get_manager();
+                    $attemptstable = new xmldb_table('quizaccess_offlineattempts');
+                    if ($dbman->table_exists($attemptstable)) {
+                        $conditions = array('quizid' => $quiz->id);
+                        if ($DB->get_field('quizaccess_offlineattempts', 'allowofflineattempts', $conditions)) {
+                            $quizdetails['allowofflineattempts'] = 1;
+                        }
                     }
                 }
                 $returnedquizzes[] = $quizdetails;
@@ -7131,6 +7148,8 @@ class local_mobile_external extends external_api {
                                                                                 exhausted the maximum number of attempts',
                                                                                 VALUE_OPTIONAL),
                             'completionpass' => new external_value(PARAM_INT, 'Whether to require passing grade', VALUE_OPTIONAL),
+                            'allowofflineattempts' => new external_value(PARAM_INT, 'Whether to allow the quiz to be attempted
+                                                                            offline in the mobile app', VALUE_OPTIONAL),
                             'autosaveperiod' => new external_value(PARAM_INT, 'Auto-save delay', VALUE_OPTIONAL),
                             'hasfeedback' => new external_value(PARAM_INT, 'Whether the quiz has any non-blank feedback text',
                                                                 VALUE_OPTIONAL),
@@ -7284,6 +7303,9 @@ class local_mobile_external extends external_api {
         }
 
         $attempts = quiz_get_user_attempts($quiz->id, $user->id, $params['status'], $params['includepreviews']);
+        foreach ($attempts as $attempt) {
+            $attempt = local_mobile_mod_quiz_add_timemodifiedoffline($attempt);
+        }
 
         $result = array();
         $result['attempts'] = $attempts;
@@ -7318,6 +7340,7 @@ class local_mobile_external extends external_api {
                 'timefinish' => new external_value(PARAM_INT, 'Time when the attempt was submitted.
                                                     0 if the attempt has not been submitted yet.', VALUE_OPTIONAL),
                 'timemodified' => new external_value(PARAM_INT, 'Last modified time.', VALUE_OPTIONAL),
+                'timemodifiedoffline' => new external_value(PARAM_INT, 'Last modified time via webservices.', VALUE_OPTIONAL),
                 'timecheckstate' => new external_value(PARAM_INT, 'Next time quiz cron should check attempt for
                                                         state changes.  NULL means never check.', VALUE_OPTIONAL),
                 'sumgrades' => new external_value(PARAM_FLOAT, 'Total marks for this attempt.', VALUE_OPTIONAL),
@@ -7622,10 +7645,14 @@ class local_mobile_external extends external_api {
                 }
             }
             $attempt = quiz_prepare_and_start_new_attempt($quizobj, $attemptnumber, $lastattempt);
+            // Update the timemodifiedoffline field.
+            $timenow = time();
+            $attemptobj = new local_mobile_quiz_attempt($attempt, $quiz, $cm, $course);
+            $attemptobj->set_offline_modified_time($timenow);
         }
 
         $result = array();
-        $result['attempt'] = $attempt;
+        $result['attempt'] = local_mobile_mod_quiz_add_timemodifiedoffline($attempt);
         $result['warnings'] = $warnings;
         return $result;
     }
@@ -7744,6 +7771,9 @@ class local_mobile_external extends external_api {
                 'type' => new external_value(PARAM_ALPHANUMEXT, 'question type, i.e: multichoice'),
                 'page' => new external_value(PARAM_INT, 'page of the quiz this question appears on'),
                 'html' => new external_value(PARAM_RAW, 'the question rendered'),
+                'sequencecheck' => new external_value(PARAM_INT, 'the number of real steps in this attempt'),
+                'lastactiontime' => new external_value(PARAM_INT, 'the timestamp of the most recent step in this question attempt'),
+                'hasautosavedstep' => new external_value(PARAM_BOOL, 'whether this question attempt has autosaved data'),
                 'flagged' => new external_value(PARAM_BOOL, 'whether the question is flagged or not'),
                 'number' => new external_value(PARAM_INT, 'question ordering number in the quiz', VALUE_OPTIONAL),
                 'state' => new external_value(PARAM_ALPHA, 'the state where the question is in', VALUE_OPTIONAL),
@@ -7777,7 +7807,10 @@ class local_mobile_external extends external_api {
                 'type' => $attemptobj->get_question_type_name($slot),
                 'page' => $attemptobj->get_question_page($slot),
                 'flagged' => $attemptobj->is_question_flagged($slot),
-                'html' => $attemptobj->render_question($slot, $review, $renderer) . $PAGE->requires->get_end_code()
+                'html' => $attemptobj->render_question($slot, $review, $renderer) . $PAGE->requires->get_end_code(),
+                'sequencecheck' => $attemptobj->get_question_attempt($slot)->get_sequence_check_count(),
+                'lastactiontime' => $attemptobj->get_question_attempt($slot)->get_last_step()->get_timecreated(),
+                'hasautosavedstep' => $attemptobj->get_question_attempt($slot)->has_autosaved_step()
             );
 
             if ($attemptobj->is_real_question($slot)) {
@@ -7850,7 +7883,7 @@ class local_mobile_external extends external_api {
         }
 
         $result = array();
-        $result['attempt'] = $attemptobj->get_attempt();
+        $result['attempt'] = local_mobile_mod_quiz_add_timemodifiedoffline($attemptobj->get_attempt());
         $result['messages'] = $messages;
         $result['nextpage'] = $nextpage;
         $result['warnings'] = $warnings;
@@ -8006,6 +8039,8 @@ class local_mobile_external extends external_api {
         }
         $timenow = time();
         $attemptobj->process_auto_save($timenow);
+        // Update the timemodifiedoffline field.
+        $attemptobj->set_offline_modified_time($timenow);
         $transaction->allow_commit();
 
         $result = array();
@@ -8101,6 +8136,9 @@ class local_mobile_external extends external_api {
 
         $result = array();
         $result['state'] = $attemptobj->process_attempt($timenow, $finishattempt, $timeup, 0);
+        // Update the timemodifiedoffline field.
+        $attemptobj->set_offline_modified_time($timenow);
+
         $result['warnings'] = $warnings;
         return $result;
     }
@@ -8195,7 +8233,7 @@ class local_mobile_external extends external_api {
 
         // Prepare the output.
         $result = array();
-        $result['attempt'] = $attemptobj->get_attempt();
+        $result['attempt'] = local_mobile_mod_quiz_add_timemodifiedoffline($attemptobj->get_attempt());
         $result['questions'] = self::get_attempt_questions_data($attemptobj, true, $page, true);
 
         $result['additionaldata'] = array();
