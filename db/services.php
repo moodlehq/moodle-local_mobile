@@ -819,6 +819,8 @@ $services = array(
             'message_airnotifier_is_system_configured',
             'mod_assign_get_assignments',
             'mod_assign_get_submissions',
+            'mod_assign_save_submission',
+            'mod_assign_submit_for_grading',
             'mod_data_get_databases_by_courses',
             'mod_forum_get_forum_discussions_paginated',
             'mod_forum_get_forum_discussion_posts',
