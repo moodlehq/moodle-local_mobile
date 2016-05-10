@@ -34,6 +34,7 @@ $string['local_mobileurlscheme_key'] = 'URL scheme';
 
 $string['loginintheapp'] = 'Via the app';
 $string['logininthebrowser'] = 'Via a browser window (for SSO plugins)';
+$string['loginintheinappbrowser'] = 'Via an embedded browser (for SSO plugins)';
 $string['checkpluginconfiguration'] = 'Check plugin configuration';
 $string['enableadditionalservice'] = 'Enable the Moodle Mobile additional features service';
 $string['enableadditionalservicedescription'] = 'This service must be enabled.';
