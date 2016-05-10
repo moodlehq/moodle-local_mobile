@@ -947,6 +947,8 @@ $services = array(
             'local_mobile_core_user_remove_user_device',
             'mod_assign_get_assignments',
             'mod_assign_get_submissions',
+            'mod_assign_save_submission',
+            'mod_assign_submit_for_grading',
             'local_mobile_core_completion_update_activity_completion_status_manually',
             'local_mobile_core_completion_get_course_completion_status',
             'local_mobile_core_completion_get_activities_completion_status',
