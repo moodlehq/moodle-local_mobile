@@ -34,6 +34,7 @@ $string['local_mobileurlscheme_key'] = 'URL scheme';
 
 $string['loginintheapp'] = 'Via the app';
 $string['logininthebrowser'] = 'Via a browser window (for SSO plugins)';
+$string['loginintheinappbrowser'] = 'Via an embedded browser (for SSO plugins)';
 $string['mod_scorm_protectpackagedownloads'] = 'Protect package downloads';
 $string['mod_scorm_protectpackagedownloads_desc'] = 'If enabled, SCORM packages can be downloaded only if the user has the course:manageactivities capability. If disabled, SCORM packages can always be downloaded (by mobile or other means).';
 $string['mod_scorm_settings'] = 'SCORM module specific settings';
