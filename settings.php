@@ -31,7 +31,8 @@ if ($hassiteconfig) {
 
     $options = array(
         1 => new lang_string('loginintheapp', 'local_mobile'),
-        2 => new lang_string('logininthebrowser', 'local_mobile')
+        2 => new lang_string('logininthebrowser', 'local_mobile'),
+        3 => new lang_string('loginintheinappbrowser', 'local_mobile'),
     );
 
     $settings->add(new admin_setting_configselect('local_mobile/typeoflogin',
