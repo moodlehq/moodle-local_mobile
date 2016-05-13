@@ -32,6 +32,48 @@ $functions = array(
         'description' => 'Retrieve the plugin settings.',
         'type'        => 'read',
     ),
+
+    'local_mobile_mod_quiz_get_quizzes_by_courses' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_quiz_get_quizzes_by_courses',
+        'description'   => 'Returns a list of quizzes in a provided list of courses,
+                            if no list is provided all quizzes that the user can view will be returned.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/quiz:view',
+    ),
+
+    'local_mobile_mod_quiz_get_attempt_data' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_quiz_get_attempt_data',
+        'description'   => 'Returns information for the given attempt page for a quiz attempt in progress.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/quiz:attempt',
+    ),
+
+    'local_mobile_mod_quiz_start_attempt' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_quiz_start_attempt',
+        'description'   => 'Starts a new attempt at a quiz.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/quiz:attempt',
+    ),
+
+    'local_mobile_mod_quiz_save_attempt' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_quiz_save_attempt',
+        'description'   => 'Processes save requests during the quiz.
+                            This function is intended for the quiz auto-save feature.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/quiz:attempt',
+    ),
+    'local_mobile_mod_quiz_process_attempt' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_quiz_process_attempt',
+        'description'   => 'Process responses during an attempt at a quiz and also deals with attempts finishing.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/quiz:attempt',
+    ),
+
 );
 
 $services = array(
@@ -148,16 +190,16 @@ $services = array(
             'mod_lti_get_tool_launch_data',
             'mod_lti_view_lti',
             'mod_page_view_page',
-            'mod_quiz_get_quizzes_by_courses',
+            'local_mobile_mod_quiz_get_quizzes_by_courses',
             'mod_quiz_view_quiz',
             'mod_quiz_get_user_attempts',
             'mod_quiz_get_user_best_grade',
             'mod_quiz_get_combined_review_options',
-            'mod_quiz_start_attempt',
-            'mod_quiz_get_attempt_data',
+            'local_mobile_mod_quiz_start_attempt',
+            'local_mobile_mod_quiz_get_attempt_data',
             'mod_quiz_get_attempt_summary',
-            'mod_quiz_save_attempt',
-            'mod_quiz_process_attempt',
+            'local_mobile_mod_quiz_save_attempt',
+            'local_mobile_mod_quiz_process_attempt',
             'mod_quiz_get_attempt_review',
             'mod_quiz_view_attempt',
             'mod_quiz_view_attempt_summary',
