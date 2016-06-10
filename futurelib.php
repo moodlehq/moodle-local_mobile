@@ -2891,7 +2891,7 @@ function local_mobile_mod_quiz_add_timemodifiedoffline($attempt) {
     $dbman = $DB->get_manager();
     $attemptstable = new xmldb_table('quizaccess_offlineattempts_a');
     if (!$dbman->table_exists($attemptstable)) {
-        return $attempts;
+        return $attempt;
     }
 
     if ($timemodifiedoffline = $DB->get_field('quizaccess_offlineattempts_a', 'timemodifiedoffline', array('attemptid' => $attempt->id))) {
