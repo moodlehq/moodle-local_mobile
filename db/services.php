@@ -616,6 +616,30 @@ $functions = array(
         'classpath'     => 'local/mobile/externallib.php',
     ),
 
+    'local_mobile_mod_wiki_get_page_for_editing' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_get_page_for_editing',
+        'description'   => 'Locks and retrieves info of page-section to be edited.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/wiki:editpage',
+    ),
+
+    'local_mobile_mod_wiki_new_page' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_new_page',
+        'description'   => 'Create a new page in a subwiki.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/wiki:editpage',
+    ),
+
+    'local_mobile_mod_wiki_edit_page' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_wiki_edit_page',
+        'description'   => 'Save the contents of a page.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/wiki:editpage',
+    ),
+
     'local_mobile_mod_quiz_get_quizzes_by_courses' => array(
         'classname'     => 'local_mobile_external',
         'methodname'    => 'mod_quiz_get_quizzes_by_courses',
@@ -883,6 +907,9 @@ $services = array(
             'local_mobile_mod_wiki_get_subwiki_pages',
             'local_mobile_mod_wiki_get_page_contents',
             'local_mobile_mod_wiki_get_subwiki_files',
+            'local_mobile_mod_wiki_get_page_for_editing',
+            'local_mobile_mod_wiki_new_page',
+            'local_mobile_mod_wiki_edit_page',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
