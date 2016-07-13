@@ -4697,4 +4697,576 @@ class local_mobile_external extends external_api {
         );
     }
 
+    /**
+     * Describes the parameters for save_submission
+     * @return external_external_function_parameters
+     * @since  Moodle 2.6
+     */
+    public static function mod_assign_save_submission_parameters() {
+        global $CFG;
+        $instance = new local_mobile_assign(null, null, null);
+        $pluginsubmissionparams = array();
+
+        foreach ($instance->get_submission_plugins() as $plugin) {
+            if ($plugin->is_visible()) {
+                $pluginparams = null;
+                if (get_class($plugin) == 'assign_submission_onlinetext') {
+
+                    $editorparams = array(
+                      'text' => new external_value(PARAM_RAW, 'The text for this submission.'),
+                      'format' => new external_value(PARAM_INT, 'The format for this submission'),
+                      'itemid' => new external_value(PARAM_INT, 'The draft area id for files attached to the submission'));
+
+                    $editorstructure = new external_single_structure($editorparams, 'Editor structure', VALUE_OPTIONAL);
+                    $pluginparams = array('onlinetext_editor' => $editorstructure);
+
+                } else if (get_class($plugin) == 'assign_submission_file') {
+                    $pluginparams = array(
+                        'files_filemanager' => new external_value(
+                            PARAM_INT,
+                            'The id of a draft area containing files for this submission.',
+                            VALUE_OPTIONAL
+                        )
+                    );
+                } else {
+                    $pluginparams = $plugin->get_external_parameters();
+                }
+
+                if (!empty($pluginparams)) {
+                    $pluginsubmissionparams = array_merge($pluginsubmissionparams, $pluginparams);
+                }
+            }
+        }
+
+        return new external_function_parameters(
+            array(
+                'assignmentid' => new external_value(PARAM_INT, 'The assignment id to operate on'),
+                'plugindata' => new external_single_structure(
+                    $pluginsubmissionparams
+                )
+            )
+        );
+    }
+
+    /**
+     * Save a student submission for a single assignment
+     *
+     * @param int $assignmentid The id of the assignment
+     * @param array $plugindata - The submitted data for plugins
+     * @return array of warnings to indicate any errors
+     * @since Moodle 2.6
+     */
+    public static function mod_assign_save_submission($assignmentid, $plugindata) {
+        global $CFG, $USER;
+
+        $params = self::validate_parameters(self::mod_assign_save_submission_parameters(),
+                                            array('assignmentid' => $assignmentid,
+                                                  'plugindata' => $plugindata));
+
+        $cm = get_coursemodule_from_instance('assign', $params['assignmentid'], 0, false, MUST_EXIST);
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        $assignment = new assign($context, $cm, null);
+
+        $notices = array();
+
+        if (!$assignment->submissions_open($USER->id)) {
+            $notices[] = get_string('duedatereached', 'assign');
+        } else {
+            $submissiondata = (object)$params['plugindata'];
+            $assignment->save_submission($submissiondata, $notices);
+        }
+
+        $warnings = array();
+        foreach ($notices as $notice) {
+            $warnings[] = self::generate_warning($params['assignmentid'],
+                                                 'couldnotsavesubmission',
+                                                 $notice);
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * Describes the return value for save_submission
+     *
+     * @return external_single_structure
+     * @since Moodle 2.6
+     */
+    public static function mod_assign_save_submission_returns() {
+        return new external_warnings();
+    }
+
+
+    /**
+     * Creates an assignment plugin structure.
+     *
+     * @return external_single_structure the plugin structure
+     */
+    private static function mod_assign_get_plugin_structure() {
+        return new external_single_structure(
+            array(
+                'type' => new external_value(PARAM_TEXT, 'submission plugin type'),
+                'name' => new external_value(PARAM_TEXT, 'submission plugin name'),
+                'fileareas' => new external_multiple_structure(
+                    new external_single_structure(
+                        array (
+                            'area' => new external_value (PARAM_TEXT, 'file area'),
+                            'files' => new external_multiple_structure(
+                                new external_single_structure(
+                                    array (
+                                        'filepath' => new external_value (PARAM_TEXT, 'file path'),
+                                        'fileurl' => new external_value (PARAM_URL, 'file download url',
+                                            VALUE_OPTIONAL)
+                                    )
+                                ), 'files', VALUE_OPTIONAL
+                            )
+                        )
+                    ), 'fileareas', VALUE_OPTIONAL
+                ),
+                'editorfields' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'name' => new external_value(PARAM_TEXT, 'field name'),
+                            'description' => new external_value(PARAM_TEXT, 'field description'),
+                            'text' => new external_value (PARAM_RAW, 'field value'),
+                            'format' => new external_format_value ('text')
+                        )
+                    )
+                    , 'editorfields', VALUE_OPTIONAL
+                )
+            )
+        );
+    }
+
+    /**
+     * Creates a submission structure.
+     *
+     * @return external_single_structure the submission structure
+     */
+    private static function mod_assign_get_submission_structure($required = VALUE_REQUIRED) {
+        return new external_single_structure(
+            array(
+                'id' => new external_value(PARAM_INT, 'submission id'),
+                'userid' => new external_value(PARAM_INT, 'student id'),
+                'attemptnumber' => new external_value(PARAM_INT, 'attempt number'),
+                'timecreated' => new external_value(PARAM_INT, 'submission creation time'),
+                'timemodified' => new external_value(PARAM_INT, 'submission last modified time'),
+                'status' => new external_value(PARAM_TEXT, 'submission status'),
+                'groupid' => new external_value(PARAM_INT, 'group id'),
+                'assignment' => new external_value(PARAM_INT, 'assignment id', VALUE_OPTIONAL),
+                'latest' => new external_value(PARAM_INT, 'latest attempt', VALUE_OPTIONAL),
+                'plugins' => new external_multiple_structure(self::mod_assign_get_plugin_structure(), 'plugins', VALUE_OPTIONAL)
+            ), 'submission info', $required
+        );
+    }
+
+    /**
+     * Creates an assign_submissions external_single_structure
+     *
+     * @return external_single_structure
+     * @since Moodle 2.5
+     */
+    private static function mod_assign_get_submissions_structure() {
+        return new external_single_structure(
+            array (
+                'assignmentid' => new external_value(PARAM_INT, 'assignment id'),
+                'submissions' => new external_multiple_structure(self::mod_assign_get_submission_structure())
+            )
+        );
+    }
+
+    /**
+     * Creates a grade single structure.
+     *
+     * @return external_single_structure a grade single structure.
+     * @since  Moodle 3.1
+     */
+    private static function mod_assign_get_grade_structure($required = VALUE_REQUIRED) {
+        return new external_single_structure(
+            array(
+                'id'                => new external_value(PARAM_INT, 'grade id'),
+                'assignment'        => new external_value(PARAM_INT, 'assignment id', VALUE_OPTIONAL),
+                'userid'            => new external_value(PARAM_INT, 'student id'),
+                'attemptnumber'     => new external_value(PARAM_INT, 'attempt number'),
+                'timecreated'       => new external_value(PARAM_INT, 'grade creation time'),
+                'timemodified'      => new external_value(PARAM_INT, 'grade last modified time'),
+                'grader'            => new external_value(PARAM_INT, 'grader'),
+                'grade'             => new external_value(PARAM_TEXT, 'grade'),
+                'gradefordisplay'   => new external_value(PARAM_RAW, 'grade rendered into a format suitable for display',
+                                                            VALUE_OPTIONAL),
+            ), 'grade information', $required
+        );
+    }
+
+   /**
+     * Return information (files and text fields) for the given plugins in the assignment.
+     *
+     * @param  assign $assign the assignment object
+     * @param  array $assignplugins array of assignment plugins (submission or feedback)
+     * @param  stdClass $item the item object (submission or grade)
+     * @return array an array containing the plugins returned information
+     */
+    private static function mod_assign_get_plugins_data($assign, $assignplugins, $item) {
+        global $CFG;
+
+        $plugins = array();
+        $fs = get_file_storage();
+
+        foreach ($assignplugins as $assignplugin) {
+
+            if (!$assignplugin->is_enabled() or !$assignplugin->is_visible()) {
+                continue;
+            }
+
+            $plugin = array(
+                'name' => $assignplugin->get_name(),
+                'type' => $assignplugin->get_type()
+            );
+            // Subtype is 'assignsubmission', type is currently 'file' or 'onlinetext'.
+            $component = $assignplugin->get_subtype().'_'.$assignplugin->get_type();
+
+            $fileareas = $assignplugin->get_file_areas();
+            foreach ($fileareas as $filearea => $name) {
+                $fileareainfo = array('area' => $filearea);
+                $files = $fs->get_area_files(
+                    $assign->get_context()->id,
+                    $component,
+                    $filearea,
+                    $item->id,
+                    "timemodified",
+                    false
+                );
+                foreach ($files as $file) {
+                    $filepath = $file->get_filepath().$file->get_filename();
+                    $fileurl = file_encode_url($CFG->wwwroot . '/webservice/pluginfile.php', '/' . $assign->get_context()->id .
+                        '/' . $component. '/'. $filearea . '/' . $item->id . $filepath);
+                    $fileinfo = array(
+                        'filepath' => $filepath,
+                        'fileurl' => $fileurl
+                        );
+                    $fileareainfo['files'][] = $fileinfo;
+                }
+                $plugin['fileareas'][] = $fileareainfo;
+            }
+
+            $editorfields = $assignplugin->get_editor_fields();
+            foreach ($editorfields as $name => $description) {
+                $editorfieldinfo = array(
+                    'name' => $name,
+                    'description' => $description,
+                    'text' => $assignplugin->get_editor_text($name, $item->id),
+                    'format' => $assignplugin->get_editor_format($name, $item->id)
+                );
+                $plugin['editorfields'][] = $editorfieldinfo;
+            }
+            $plugins[] = $plugin;
+        }
+        return $plugins;
+    }
+
+    /**
+     * Describes the parameters for mod_assign_view_submission_status.
+     *
+     * @return external_external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_assign_view_submission_status_parameters() {
+        return new external_function_parameters (
+            array(
+                'assignid' => new external_value(PARAM_INT, 'assign instance id'),
+            )
+        );
+    }
+
+    /**
+     * Trigger the submission status viewed event.
+     *
+     * @param int $assignid assign instance id
+     * @return array of warnings and status result
+     * @since Moodle 3.1
+     */
+    public static function mod_assign_view_submission_status($assignid) {
+        global $DB, $CFG;
+
+        $warnings = array();
+        $params = array(
+            'assignid' => $assignid,
+        );
+        $params = self::validate_parameters(self::mod_assign_view_submission_status_parameters(), $params);
+
+        // Request and permission validation.
+        $assign = $DB->get_record('assign', array('id' => $params['assignid']), 'id', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($assign, 'assign');
+
+        $context = context_module::instance($cm->id);
+        // Please, note that is not required to check mod/assign:view because is done by validate_context->require_login.
+        self::validate_context($context);
+
+        $assign = new local_mobile_assign($context, $cm, $course);
+        \mod_assign\event\submission_status_viewed::create_from_assign($assign)->trigger();
+
+        $result = array();
+        $result['status'] = true;
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the mod_assign_view_submission_status return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_assign_view_submission_status_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
+    /**
+     * Describes the parameters for mod_assign_get_submission_status.
+     *
+     * @return external_external_function_parameters
+     * @since Moodle 3.1
+     */
+    public static function mod_assign_get_submission_status_parameters() {
+        return new external_function_parameters (
+            array(
+                'assignid' => new external_value(PARAM_INT, 'assignment instance id'),
+                'userid' => new external_value(PARAM_INT, 'user id (empty for current user)', VALUE_DEFAULT, 0),
+            )
+        );
+    }
+
+    /**
+     * Returns information about an assignment submission status for a given user.
+     *
+     * @param int $assignid assignment instance id
+     * @param int $userid user id (empty for current user)
+     * @return array of warnings and grading, status, feedback and previous attempts information
+     * @since Moodle 3.1
+     * @throws required_capability_exception
+     */
+    public static function mod_assign_get_submission_status($assignid, $userid = 0) {
+        global $USER, $DB;
+
+        $warnings = array();
+
+        $params = array(
+            'assignid' => $assignid,
+            'userid' => $userid,
+        );
+        $params = self::validate_parameters(self::mod_assign_get_submission_status_parameters(), $params);
+
+        // Request and permission validation.
+        $assign = $DB->get_record('assign', array('id' => $params['assignid']), 'id', MUST_EXIST);
+        list($course, $cm) = get_course_and_cm_from_instance($assign, 'assign');
+
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        $assign = new local_mobile_assign($context, $cm, $course);
+
+        // Default value for userid.
+        if (empty($params['userid'])) {
+            $params['userid'] = $USER->id;
+        }
+        $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
+        core_user::require_active_user($user);
+
+        if (!$assign->can_view_submission($user->id)) {
+            throw new required_capability_exception($context, 'mod/assign:viewgrades', 'nopermission', '');
+        }
+
+        $gradingsummary = $lastattempt = $feedback = $previousattempts = null;
+
+        // Get the renderable since it contais all the info we need.
+        if ($assign->can_view_grades()) {
+            $gradingsummary = $assign->get_assign_grading_summary_renderable();
+        }
+
+        // Retrieve the rest of the renderable objects.
+        if (has_capability('mod/assign:submit', $assign->get_context(), $user)) {
+            $lastattempt = $assign->get_assign_submission_status_renderable($user, true);
+        }
+        $feedback = $assign->get_assign_feedback_status_renderable($user);
+
+        $previousattempts = $assign->get_assign_attempt_history_renderable($user);
+
+        // Now, build the result.
+        $result = array();
+
+        // First of all, grading summary, this is suitable for teachers/managers.
+        if ($gradingsummary) {
+            $result['gradingsummary'] = $gradingsummary;
+        }
+
+        // Did we submit anything?
+        if ($lastattempt) {
+            $submissionplugins = $assign->get_submission_plugins();
+
+            if (empty($lastattempt->submission)) {
+                unset($lastattempt->submission);
+            } else {
+                $lastattempt->submission->plugins = self::mod_assign_get_plugins_data($assign, $submissionplugins, $lastattempt->submission);
+            }
+
+            if (empty($lastattempt->teamsubmission)) {
+                unset($lastattempt->teamsubmission);
+            } else {
+                $lastattempt->teamsubmission->plugins = self::mod_assign_get_plugins_data($assign, $submissionplugins,
+                                                                                $lastattempt->teamsubmission);
+            }
+
+            // We need to change the type of some of the structures retrieved from the renderable.
+            if (!empty($lastattempt->submissiongroup)) {
+                $lastattempt->submissiongroup = $lastattempt->submissiongroup->id;
+            } else {
+                unset($lastattempt->submissiongroup);
+            }
+
+            if (!empty($lastattempt->usergroups)) {
+                $lastattempt->usergroups = array_keys($lastattempt->usergroups);
+            }
+            // We cannot use array_keys here.
+            if (!empty($lastattempt->submissiongroupmemberswhoneedtosubmit)) {
+                $lastattempt->submissiongroupmemberswhoneedtosubmit = array_map(
+                                                                            function($e){
+                                                                                return $e->id;
+                                                                            },
+                                                                            $lastattempt->submissiongroupmemberswhoneedtosubmit);
+            }
+
+            $result['lastattempt'] = $lastattempt;
+        }
+
+        // The feedback for our latest submission.
+        if ($feedback) {
+            if ($feedback->grade) {
+                $feedbackplugins = $assign->get_feedback_plugins();
+                $feedback->plugins = self::mod_assign_get_plugins_data($assign, $feedbackplugins, $feedback->grade);
+            } else {
+                unset($feedback->plugins);
+                unset($feedback->grade);
+            }
+
+            $result['feedback'] = $feedback;
+        }
+
+        // Retrieve only previous attempts.
+        if ($previousattempts and count($previousattempts->submissions) > 1) {
+            // Don't show the last one because it is the current submission.
+            array_pop($previousattempts->submissions);
+
+            // Show newest to oldest.
+            $previousattempts->submissions = array_reverse($previousattempts->submissions);
+
+            foreach ($previousattempts->submissions as $i => $submission) {
+                $attempt = array();
+
+                $grade = null;
+                foreach ($previousattempts->grades as $onegrade) {
+                    if ($onegrade->attemptnumber == $submission->attemptnumber) {
+                        $grade = $onegrade;
+                        break;
+                    }
+                }
+
+                $attempt['attemptnumber'] = $submission->attemptnumber;
+
+                if ($submission) {
+                    $submission->plugins = self::mod_assign_get_plugins_data($assign, $previousattempts->submissionplugins, $submission);
+                    $attempt['submission'] = $submission;
+                }
+
+                if ($grade) {
+                    // From object to id.
+                    $grade->grader = $grade->grader->id;
+                    $feedbackplugins = self::mod_assign_get_plugins_data($assign, $previousattempts->feedbackplugins, $grade);
+
+                    $attempt['grade'] = $grade;
+                    $attempt['feedbackplugins'] = $feedbackplugins;
+                }
+                $result['previousattempts'][] = $attempt;
+            }
+        }
+
+        $result['warnings'] = $warnings;
+        return $result;
+    }
+
+    /**
+     * Describes the mod_assign_get_submission_status return value.
+     *
+     * @return external_single_structure
+     * @since Moodle 3.1
+     */
+    public static function mod_assign_get_submission_status_returns() {
+        return new external_single_structure(
+            array(
+                'gradingsummary' => new external_single_structure(
+                    array(
+                        'participantcount' => new external_value(PARAM_INT, 'Number of users who can submit.'),
+                        'submissiondraftscount' => new external_value(PARAM_INT, 'Number of submissions in draft status.'),
+                        'submissiondraftscount' => new external_value(PARAM_INT, 'Number of submissions in draft status.'),
+                        'submissionsenabled' => new external_value(PARAM_BOOL, 'Whether submissions are enabled or not.'),
+                        'submissionssubmittedcount' => new external_value(PARAM_INT, 'Number of submissions in submitted status.'),
+                        'submissionsneedgradingcount' => new external_value(PARAM_INT, 'Number of submissions that need grading.'),
+                        'warnofungroupedusers' => new external_value(PARAM_BOOL, 'Whether we need to warn people that there
+                                                                        are users without groups.'),
+                    ), 'Grading information.', VALUE_OPTIONAL
+                ),
+                'lastattempt' => new external_single_structure(
+                    array(
+                        'submission' => self::mod_assign_get_submission_structure(VALUE_OPTIONAL),
+                        'teamsubmission' => self::mod_assign_get_submission_structure(VALUE_OPTIONAL),
+                        'submissiongroup' => new external_value(PARAM_INT, 'The submission group id (for group submissions only).',
+                                                                VALUE_OPTIONAL),
+                        'submissiongroupmemberswhoneedtosubmit' => new external_multiple_structure(
+                            new external_value(PARAM_INT, 'USER id.'),
+                            'List of users who still need to submit (for group submissions only).',
+                            VALUE_OPTIONAL
+                        ),
+                        'submissionsenabled' => new external_value(PARAM_BOOL, 'Whether submissions are enabled or not.'),
+                        'locked' => new external_value(PARAM_BOOL, 'Whether new submissions are locked.'),
+                        'graded' => new external_value(PARAM_BOOL, 'Whether the submission is graded.'),
+                        'canedit' => new external_value(PARAM_BOOL, 'Whether the user can edit the current submission.'),
+                        'cansubmit' => new external_value(PARAM_BOOL, 'Whether the user can submit.'),
+                        'extensionduedate' => new external_value(PARAM_INT, 'Extension due date.'),
+                        'blindmarking' => new external_value(PARAM_BOOL, 'Whether blind marking is enabled.'),
+                        'gradingstatus' => new external_value(PARAM_ALPHANUMEXT, 'Grading status.'),
+                        'usergroups' => new external_multiple_structure(
+                            new external_value(PARAM_INT, 'Group id.'), 'User groups in the course.'
+                        ),
+                    ), 'Last attempt information.', VALUE_OPTIONAL
+                ),
+                'feedback' => new external_single_structure(
+                    array(
+                        'grade' => self::mod_assign_get_grade_structure(VALUE_OPTIONAL),
+                        'gradefordisplay' => new external_value(PARAM_RAW, 'Grade rendered into a format suitable for display.'),
+                        'gradeddate' => new external_value(PARAM_INT, 'The date the user was graded.'),
+                        'plugins' => new external_multiple_structure(self::mod_assign_get_plugin_structure(), 'Plugins info.', VALUE_OPTIONAL),
+                    ), 'Feedback for the last attempt.', VALUE_OPTIONAL
+                ),
+                'previousattempts' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'attemptnumber' => new external_value(PARAM_INT, 'Attempt number.'),
+                            'submission' => self::mod_assign_get_submission_structure(VALUE_OPTIONAL),
+                            'grade' => self::mod_assign_get_grade_structure(VALUE_OPTIONAL),
+                            'feedbackplugins' => new external_multiple_structure(self::mod_assign_get_plugin_structure(), 'Feedback info.',
+                                                                                    VALUE_OPTIONAL),
+                        )
+                    ), 'List all the previous attempts did by the user.', VALUE_OPTIONAL
+                ),
+                'warnings' => new external_warnings(),
+            )
+        );
+    }
+
 }

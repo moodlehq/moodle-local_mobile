@@ -414,6 +414,33 @@ $functions = array(
         'capabilities'  => 'mod/quiz:view',
     ),
 
+    'local_mobile_mod_assign_save_submission' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_assign_save_submission',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Save a submission.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/assign:submit',
+    ),
+
+    'local_mobile_mod_assign_view_submission_status' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_assign_view_submission_status',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Trigger the submission status viewed event.',
+        'type'          => 'write',
+        'capabilities'  => 'mod/assign:view',
+    ),
+
+    'local_mobile_mod_assign_get_submission_status' => array(
+        'classname'     => 'local_mobile_external',
+        'methodname'    => 'mod_assign_get_submission_status',
+        'classpath'     => 'local/mobile/externallib.php',
+        'description'   => 'Returns information about an assignment submission status for a given user.',
+        'type'          => 'read',
+        'capabilities'  => 'mod/assign:view',
+    ),
+
 );
 
 $services = array(
@@ -470,9 +497,9 @@ $services = array(
             'message_airnotifier_is_system_configured',
             'mod_assign_get_assignments',
             'mod_assign_get_submissions',
-            'mod_assign_save_submission',
             'mod_assign_submit_for_grading',
             'mod_assign_view_grading_table',
+            'mod_assign_get_user_mappings',
             'mod_book_view_book',
             'mod_chat_get_chat_latest_messages',
             'mod_chat_get_chat_users',
@@ -559,6 +586,9 @@ $services = array(
             'local_mobile_mod_wiki_get_page_for_editing',
             'local_mobile_mod_wiki_new_page',
             'local_mobile_mod_wiki_edit_page',
+            'local_mobile_mod_assign_save_submission',
+            'local_mobile_mod_assign_get_submission_status',
+            'local_mobile_mod_assign_view_submission_status',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
