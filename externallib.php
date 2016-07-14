@@ -5132,6 +5132,8 @@ class local_mobile_external extends external_api {
 
             if (!empty($lastattempt->usergroups)) {
                 $lastattempt->usergroups = array_keys($lastattempt->usergroups);
+            } else {
+                $lastattempt->usergroups = array();
             }
             // We cannot use array_keys here.
             if (!empty($lastattempt->submissiongroupmemberswhoneedtosubmit)) {
