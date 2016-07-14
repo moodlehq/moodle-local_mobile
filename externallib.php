@@ -9531,7 +9531,7 @@ class local_mobile_external extends external_api {
             $params['userid'] = $USER->id;
         }
         $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
-        core_user::require_active_user($user);
+        local_mobile_require_active_user($user);
 
         if (!$assign->can_view_submission($user->id)) {
             throw new required_capability_exception($context, 'mod/assign:viewgrades', 'nopermission', '');
@@ -9586,6 +9586,8 @@ class local_mobile_external extends external_api {
 
             if (!empty($lastattempt->usergroups)) {
                 $lastattempt->usergroups = array_keys($lastattempt->usergroups);
+            } else {
+                $lastattempt->usergroups = array();
             }
             // We cannot use array_keys here.
             if (!empty($lastattempt->submissiongroupmemberswhoneedtosubmit)) {
@@ -9719,71 +9721,6 @@ class local_mobile_external extends external_api {
                     ), 'List all the previous attempts did by the user.', VALUE_OPTIONAL
                 ),
                 'warnings' => new external_warnings(),
-            )
-        );
-    }
-
-    /**
-     * Returns description of method parameters
-     *
-     * @return external_function_parameters
-     * @since Moodle 3.0
-     */
-    public static function mod_assign_view_grading_table_parameters() {
-        return new external_function_parameters(
-            array(
-                'assignid' => new external_value(PARAM_INT, 'assign instance id')
-            )
-        );
-    }
-
-    /**
-     * Trigger the grading_table_viewed event.
-     *
-     * @param int $assignid the assign instance id
-     * @return array of warnings and status result
-     * @since Moodle 3.0
-     * @throws moodle_exception
-     */
-    public static function mod_assign_view_grading_table($assignid) {
-        global $DB, $CFG;
-
-        $params = self::validate_parameters(self::mod_assign_view_grading_table_parameters(),
-                                            array(
-                                                'assignid' => $assignid
-                                            ));
-        $warnings = array();
-
-        // Request and permission validation.
-        $assign = $DB->get_record('assign', array('id' => $params['assignid']), 'id', MUST_EXIST);
-        list($course, $cm) = get_course_and_cm_from_instance($assign, 'assign');
-
-        $context = context_module::instance($cm->id);
-        self::validate_context($context);
-
-        require_capability('mod/assign:view', $context);
-
-        $assign = new assign($context, null, null);
-        $assign->require_view_grades();
-        \mod_assign\event\grading_table_viewed::create_from_assign($assign)->trigger();
-
-        $result = array();
-        $result['status'] = true;
-        $result['warnings'] = $warnings;
-        return $result;
-    }
-
-    /**
-     * Returns description of method result value
-     *
-     * @return external_description
-     * @since Moodle 3.0
-     */
-    public static function mod_assign_view_grading_table_returns() {
-        return new external_single_structure(
-            array(
-                'status' => new external_value(PARAM_BOOL, 'status: true if success'),
-                'warnings' => new external_warnings()
             )
         );
     }
