@@ -950,15 +950,6 @@ $functions = array(
         'capabilities'  => 'mod/assign:view',
     ),
 
-    'local_mobile_mod_assign_view_grading_table' => array(
-        'classname'     => 'local_mobile_external',
-        'methodname'    => 'mod_assign_view_grading_table',
-        'classpath'     => 'local/mobile/externallib.php',
-        'description'   => 'Trigger events for completion view.',
-        'type'          => 'read',
-        'capabilities'  => 'mod/assign:view',
-    ),
-
 );
 
 $services = array(
@@ -1026,7 +1017,6 @@ $services = array(
             'local_mobile_mod_resource_view_resource',
             'local_mobile_mod_url_view_url',
             'local_mobile_mod_page_view_page',
-            'local_mobile_mod_assign_view_grading_table',
             'local_mobile_mod_folder_view_folder',
             'local_mobile_mod_chat_login_user',
             'local_mobile_mod_chat_get_chat_users',
