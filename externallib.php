@@ -4216,6 +4216,14 @@ class local_mobile_external extends external_api {
             array(
                 'attemptid' => new external_value(PARAM_INT, 'attempt id'),
                 'page' => new external_value(PARAM_INT, 'page number'),
+                'preflightdata' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'name' => new external_value(PARAM_ALPHANUMEXT, 'data name'),
+                            'value' => new external_value(PARAM_RAW, 'data value'),
+                        )
+                    ), 'Preflight required data (like passwords)', VALUE_DEFAULT, array()
+                )
             )
         );
     }
@@ -4228,13 +4236,14 @@ class local_mobile_external extends external_api {
      * @return array of warnings and status result
      * @since Moodle 3.1
      */
-    public static function mod_quiz_view_attempt($attemptid, $page) {
+    public static function mod_quiz_view_attempt($attemptid, $page, $preflightdata = array()) {
 
         $warnings = array();
 
         $params = array(
             'attemptid' => $attemptid,
             'page' => $page,
+            'preflightdata' => $preflightdata,
         );
         $params = self::validate_parameters(self::mod_quiz_view_attempt_parameters(), $params);
         list($attemptobj, $messages) = self::mod_quiz_validate_attempt($params);
@@ -4278,6 +4287,14 @@ class local_mobile_external extends external_api {
         return new external_function_parameters (
             array(
                 'attemptid' => new external_value(PARAM_INT, 'attempt id'),
+                'preflightdata' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'name' => new external_value(PARAM_ALPHANUMEXT, 'data name'),
+                            'value' => new external_value(PARAM_RAW, 'data value'),
+                        )
+                    ), 'Preflight required data (like passwords)', VALUE_DEFAULT, array()
+                )
             )
         );
     }
@@ -4289,12 +4306,13 @@ class local_mobile_external extends external_api {
      * @return array of warnings and status result
      * @since Moodle 3.1
      */
-    public static function mod_quiz_view_attempt_summary($attemptid) {
+    public static function mod_quiz_view_attempt_summary($attemptid, $preflightdata = array()) {
 
         $warnings = array();
 
         $params = array(
             'attemptid' => $attemptid,
+            'preflightdata' => $preflightdata,
         );
         $params = self::validate_parameters(self::mod_quiz_view_attempt_summary_parameters(), $params);
         list($attemptobj, $messages) = self::mod_quiz_validate_attempt($params);
