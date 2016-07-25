@@ -9692,7 +9692,7 @@ class local_mobile_external extends external_api {
                         'submissionssubmittedcount' => new external_value(PARAM_INT, 'Number of submissions in submitted status.'),
                         'submissionsneedgradingcount' => new external_value(PARAM_INT, 'Number of submissions that need grading.'),
                         'warnofungroupedusers' => new external_value(PARAM_BOOL, 'Whether we need to warn people that there
-                                                                        are users without groups.'),
+                                                                        are users without groups.', VALUE_OPTIONAL),
                     ), 'Grading information.', VALUE_OPTIONAL
                 ),
                 'lastattempt' => new external_single_structure(
