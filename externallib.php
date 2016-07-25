@@ -11064,6 +11064,38 @@ class local_mobile_external extends external_api {
     }
 
     /**
+     * Generate a warning in a standard structure for a known failure.
+     *
+     * @param int $assignmentid - The assignment
+     * @param string $warningcode - The key for the warning message
+     * @param string $detail - A description of the error
+     * @return array - Warning structure containing item, itemid, warningcode, message
+     */
+    private static function mod_assign_generate_warning($assignmentid, $warningcode, $detail) {
+        $warningmessages = array(
+            'couldnotlock'=>'Could not lock the submission for this user.',
+            'couldnotunlock'=>'Could not unlock the submission for this user.',
+            'couldnotsubmitforgrading'=>'Could not submit assignment for grading.',
+            'couldnotrevealidentities'=>'Could not reveal identities.',
+            'couldnotgrantextensions'=>'Could not grant submission date extensions.',
+            'couldnotrevert'=>'Could not revert submission to draft.',
+            'invalidparameters'=>'Invalid parameters.',
+            'couldnotsavesubmission'=>'Could not save submission.',
+            'couldnotsavegrade'=>'Could not save grade.'
+        );
+
+        $message = $warningmessages[$warningcode];
+        if (empty($message)) {
+            $message = 'Unknown warning type.';
+        }
+
+        return array('item'=>$detail,
+                     'itemid'=>$assignmentid,
+                     'warningcode'=>$warningcode,
+                     'message'=>$message);
+    }
+
+    /**
      * Describes the parameters for save_submission
      * @return external_external_function_parameters
      * @since  Moodle 2.6
@@ -11146,7 +11178,7 @@ class local_mobile_external extends external_api {
 
         $warnings = array();
         foreach ($notices as $notice) {
-            $warnings[] = self::generate_warning($params['assignmentid'],
+            $warnings[] = self::mod_assign_generate_warning($params['assignmentid'],
                                                  'couldnotsavesubmission',
                                                  $notice);
         }
