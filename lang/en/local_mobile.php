@@ -40,3 +40,4 @@ $string['enableadditionalservice'] = 'Enable the Moodle Mobile additional featur
 $string['enableadditionalservicedescription'] = 'This service must be enabled.';
 $string['allowpermissions'] = 'Grant permissions to the authenticated user role';
 $string['allowpermissionsdescription'] = 'Edit the Authenticated user role and allow the capability moodle/webservice:createtoken';
+$string['clickheretolaunchtheapp'] = 'Please, click here if the app does not open automatically';
