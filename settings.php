@@ -29,20 +29,6 @@ if ($hassiteconfig) {
     $settings = new admin_settingpage('local_mobile', new lang_string('pluginname', 'local_mobile'));
     $ADMIN->add('localplugins', $settings);
 
-    $options = array(
-        1 => new lang_string('loginintheapp', 'local_mobile'),
-        2 => new lang_string('logininthebrowser', 'local_mobile'),
-        3 => new lang_string('loginintheinappbrowser', 'local_mobile'),
-    );
-
-    $settings->add(new admin_setting_configselect('local_mobile/typeoflogin',
-                        get_string('local_mobiletypeoflogin_key', 'local_mobile'),
-                        get_string('local_mobiletypeoflogin', 'local_mobile'), 1, $options));
-
-    $settings->add(new admin_setting_configtext('local_mobile/urlscheme',
-                        get_string('local_mobileurlscheme_key', 'local_mobile'),
-                        get_string('local_mobileurlscheme', 'local_mobile'), '', PARAM_NOTAGS));
-
     $url = new moodle_url('/local/mobile/checkconfiguration.php', array('sesskey' => sesskey()));
     $link = html_writer::link($url, get_string('checkpluginconfiguration', 'local_mobile'));
     $settings->add(new admin_setting_heading('checkpluginconfiguration', '', $link));
