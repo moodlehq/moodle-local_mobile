@@ -73,7 +73,44 @@ $functions = array(
         'type'          => 'write',
         'capabilities'  => 'mod/quiz:attempt',
     ),
-
+      'local_mobile_mod_assign_view_assign' => array(
+            'classname'     => 'local_mobile_external',
+            'methodname'    => 'mod_assign_view_assign',
+            'classpath'     => 'local/mobile/externallib.php',
+            'description'   => 'Update the module completion status.',
+            'type'          => 'write',
+            'capabilities'  => 'mod/assign:view',
+      ),
+      'local_mobile_core_course_get_user_navigation_options' => array(
+            'classname' => 'local_mobile_external',
+            'methodname' => 'core_course_get_user_navigation_options',
+            'classpath' => 'local/mobile/externallib.php',
+            'description' => 'Return a list of navigation options in a set of courses that are avaialable or not for the current user.',
+            'type' => 'read',
+      ),
+      'local_mobile_core_course_get_user_administration_options' => array(
+            'classname' => 'local_mobile_external',
+            'methodname' => 'core_course_get_user_administration_options',
+            'classpath' => 'local/mobile/externallib.php',
+            'description' => 'Return a list of administration options in a set of courses that are avaialable or not for the current
+                            user.',
+            'type' => 'read',
+      ),
+      'local_mobile_core_user_update_picture' => array(
+            'classname' => 'local_mobile_external',
+            'methodname' => 'core_user_update_picture',
+            'classpath' => 'local/mobile/externallib.php',
+            'description' => 'Update or delete the user picture in the site',
+            'type' => 'write',
+            'capabilities' => 'moodle/user:editownprofile, moodle/user:editprofile',
+      ),
+      'local_mobile_tool_mobile_get_config' => array(
+            'classname'   => 'local_mobile_external',
+            'methodname'  => 'tool_mobile_get_config',
+            'classpath' => 'local/mobile/externallib.php',
+            'description' => 'Returns a list of the site configurations, filtering by section.',
+            'type'        => 'read',
+      ),
 );
 
 $services = array(
@@ -193,6 +230,11 @@ $services = array(
             'mod_lti_get_tool_launch_data',
             'mod_lti_view_lti',
             'mod_page_view_page',
+            'local_mobile_core_course_get_user_navigation_options',
+            'local_mobile_core_course_get_user_administration_options',
+            'local_mobile_core_user_update_picture',
+            'local_mobile_mod_assign_view_assign',
+            'local_mobile_tool_mobile_get_config',
             'local_mobile_mod_quiz_get_quizzes_by_courses',
             'mod_quiz_view_quiz',
             'mod_quiz_get_user_attempts',
