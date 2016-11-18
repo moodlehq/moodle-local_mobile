@@ -3154,3 +3154,782 @@ class local_mobile_assign extends assign {
     }
 
 }
+
+require_once("$CFG->dirroot/course/lib.php");
+
+if (!function_exists('course_get_user_navigation_options')) {
+    /**
+     * Return an object with the list of navigation options in a course that are avaialable or not for the current user.
+     * This function also handles the frontpage course.
+     *
+     * @param  stdClass $context context object (it can be a course context or the system context for frontpage settings)
+     * @param  stdClass $course  the course where the settings are being rendered
+     * @return stdClass          the navigation options in a course and their availability status
+     * @since  Moodle 3.2
+     */
+    function course_get_user_navigation_options($context, $course = null) {
+        global $CFG;
+
+        $isloggedin = isloggedin();
+        $isguestuser = isguestuser();
+        $isfrontpage = $context->contextlevel == CONTEXT_SYSTEM;
+
+        if ($isfrontpage) {
+            $sitecontext = $context;
+        } else {
+            $sitecontext = context_system::instance();
+        }
+
+        $options = new stdClass;
+        $options->blogs = !empty($CFG->enableblogs) &&
+                            ($CFG->bloglevel == BLOG_GLOBAL_LEVEL ||
+                            ($CFG->bloglevel == BLOG_SITE_LEVEL and ($isloggedin and !$isguestuser)))
+                            && has_capability('moodle/blog:view', $sitecontext);
+
+        $options->notes = !empty($CFG->enablenotes) && has_any_capability(array('moodle/notes:manage', 'moodle/notes:view'), $context);
+
+        // Frontpage settings?
+        if ($isfrontpage) {
+            if ($course->id == SITEID) {
+                $options->participants = has_capability('moodle/site:viewparticipants', $sitecontext);
+            } else {
+                $options->participants = has_capability('moodle/course:viewparticipants', context_course::instance($course->id));
+            }
+
+            $options->badges = !empty($CFG->enablebadges) && has_capability('moodle/badges:viewbadges', $sitecontext);
+            $options->tags = !empty($CFG->usetags) && $isloggedin;
+            $options->search = !empty($CFG->enableglobalsearch) && has_capability('moodle/search:query', $sitecontext);
+            $options->calendar = $isloggedin;
+        } else {
+            $options->participants = has_capability('moodle/course:viewparticipants', $context);
+            $options->badges = !empty($CFG->enablebadges) && !empty($CFG->badges_allowcoursebadges) &&
+                                has_capability('moodle/badges:viewbadges', $context);
+            // Add view grade report is permitted.
+            $grades = false;
+
+            if (has_capability('moodle/grade:viewall', $context)) {
+                $grades = true;
+            } else if (!empty($course->showgrades)) {
+                $reports = core_component::get_plugin_list('gradereport');
+                if (is_array($reports) && count($reports) > 0) {  // Get all installed reports.
+                    arsort($reports);   // User is last, we want to test it first.
+                    foreach ($reports as $plugin => $plugindir) {
+                        if (has_capability('gradereport/'.$plugin.':view', $context)) {
+                            // Stop when the first visible plugin is found.
+                            $grades = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            $options->grades = $grades;
+        }
+
+        if (\core_competency\api::is_enabled()) {
+            $capabilities = array('moodle/competency:coursecompetencyview', 'moodle/competency:coursecompetencymanage');
+            $options->competencies = has_any_capability($capabilities, $context);
+        }
+        return $options;
+    }
+}
+
+if (!function_exists('course_get_user_administration_options')) {
+    /**
+     * Return an object with the list of administration options in a course that are available or not for the current user.
+     * This function also handles the frontpage settings.
+     *
+     * @param  stdClass $course  course object (for frontpage it should be a clone of $SITE)
+     * @param  stdClass $context context object (course context)
+     * @return stdClass          the administration options in a course and their availability status
+     * @since  Moodle 3.2
+     */
+    function course_get_user_administration_options($course, $context) {
+        global $CFG;
+        $isfrontpage = $course->id == SITEID;
+
+        $options = new stdClass;
+        $options->update = has_capability('moodle/course:update', $context);
+        $options->filters = has_capability('moodle/filter:manage', $context) &&
+                            count(filter_get_available_in_context($context)) > 0;
+        $options->reports = has_capability('moodle/site:viewreports', $context);
+        $options->backup = has_capability('moodle/backup:backupcourse', $context);
+        $options->restore = has_capability('moodle/restore:restorecourse', $context);
+        $options->files = $course->legacyfiles == 2 and has_capability('moodle/course:managefiles', $context);
+
+        if (!$isfrontpage) {
+            $options->tags = has_capability('moodle/course:tag', $context);
+            $options->gradebook = has_capability('moodle/grade:manage', $context);
+            $options->outcomes = !empty($CFG->enableoutcomes) && has_capability('moodle/course:update', $context);
+            $options->badges = !empty($CFG->enablebadges);
+            $options->import = has_capability('moodle/restore:restoretargetimport', $context);
+            $options->publish = has_capability('moodle/course:publish', $context);
+            $options->reset = has_capability('moodle/course:reset', $context);
+            $options->roles = has_capability('moodle/role:switchroles', $context);
+        } else {
+            // Set default options to false.
+            $listofoptions = array('tags', 'gradebook', 'outcomes', 'badges', 'import', 'publish', 'reset', 'roles', 'grades');
+
+            foreach ($listofoptions as $option) {
+                $options->$option = false;
+            }
+        }
+
+        return $options;
+    }
+}
+
+require_once("$CFG->dirroot/user/lib.php");
+
+/**
+ * Updates the provided users profile picture based upon the expected fields returned from the edit or edit_advanced forms.
+ *
+ * @param stdClass $usernew An object that contains some information about the user being updated
+ * @param array $filemanageroptions
+ * @return bool True if the user was updated, false if it stayed the same.
+ */
+function local_mobile_core_user_update_picture(stdClass $usernew, $filemanageroptions = array()) {
+    global $CFG, $DB;
+    require_once("$CFG->libdir/gdlib.php");
+
+    $context = context_user::instance($usernew->id, MUST_EXIST);
+    $user = core_user::get_user($usernew->id, 'id, picture', MUST_EXIST);
+
+    $newpicture = $user->picture;
+    // Get file_storage to process files.
+    $fs = get_file_storage();
+    if (!empty($usernew->deletepicture)) {
+        // The user has chosen to delete the selected users picture.
+        $fs->delete_area_files($context->id, 'user', 'icon'); // Drop all images in area.
+        $newpicture = 0;
+
+    } else {
+        // Save newly uploaded file, this will avoid context mismatch for newly created users.
+        file_save_draft_area_files($usernew->imagefile, $context->id, 'user', 'newicon', 0, $filemanageroptions);
+        if (($iconfiles = $fs->get_area_files($context->id, 'user', 'newicon')) && count($iconfiles) == 2) {
+            // Get file which was uploaded in draft area.
+            foreach ($iconfiles as $file) {
+                if (!$file->is_directory()) {
+                    break;
+                }
+            }
+            // Copy file to temporary location and the send it for processing icon.
+            if ($iconfile = $file->copy_content_to_temp()) {
+                // There is a new image that has been uploaded.
+                // Process the new image and set the user to make use of it.
+                // NOTE: Uploaded images always take over Gravatar.
+                $newpicture = (int)process_new_icon($context, 'user', 'icon', 0, $iconfile);
+                // Delete temporary file.
+                @unlink($iconfile);
+                // Remove uploaded file.
+                $fs->delete_area_files($context->id, 'user', 'newicon');
+            } else {
+                // Something went wrong while creating temp file.
+                // Remove uploaded file.
+                $fs->delete_area_files($context->id, 'user', 'newicon');
+                return false;
+            }
+        }
+    }
+
+    if ($newpicture != $user->picture) {
+        $DB->set_field('user', 'picture', $newpicture, array('id' => $user->id));
+        return true;
+    } else {
+        return false;
+    }
+}
+
+require_once($CFG->dirroot . '/course/lib.php');
+
+if (!function_exists('course_check_updates')) {
+    /**
+     * Check for course updates in the given context level instances (only modules supported right Now)
+     *
+     * @param  stdClass $course  course object
+     * @param  array $tocheck    instances to check for updates
+     * @param  array $filter check only for updates in these areas
+     * @return array list of warnings and instances with updates information
+     * @since  Moodle 3.2
+     */
+    function course_check_updates($course, $tocheck, $filter = array()) {
+        global $CFG, $DB;
+
+        $instances = array();
+        $warnings = array();
+        $modulescallbacksupport = array();
+        $modinfo = get_fast_modinfo($course);
+
+        $supportedplugins = array(
+            'mod_assign' => true,
+            'mod_book' => true,
+            'mod_choice' => true,
+            'mod_folder' => array('content'),
+            'mod_glossary' => true,
+            'mod_imscp' => array('content'),
+            'mod_label' => array(),
+            'mod_lti' => true,
+            'mod_page' => array('content'),
+            'mod_quiz' => true,
+            'mod_resource' => array('content'),
+            'mod_scorm' => true,
+            'mod_survey' => true,
+            'mod_url' => array('content'),
+            'mod_wiki' => true,
+        );
+
+        // Check instances.
+        foreach ($tocheck as $instance) {
+            if ($instance['contextlevel'] == 'module') {
+                // Check module visibility.
+                try {
+                    $cm = $modinfo->get_cm($instance['id']);
+                } catch (Exception $e) {
+                    $warnings[] = array(
+                        'item' => 'module',
+                        'itemid' => $instance['id'],
+                        'warningcode' => 'cmidnotincourse',
+                        'message' => 'This module id does not belong to this course.'
+                    );
+                    continue;
+                }
+
+                if (!$cm->uservisible) {
+                    $warnings[] = array(
+                        'item' => 'module',
+                        'itemid' => $instance['id'],
+                        'warningcode' => 'nonuservisible',
+                        'message' => 'You don\'t have access to this module.'
+                    );
+                    continue;
+                }
+
+                if (!isset($supportedplugins['mod_' . $cm->modname])) {
+                    $warnings[] = array(
+                        'item' => 'module',
+                        'itemid' => $instance['id'],
+                        'warningcode' => 'missingcallback',
+                        'message' => 'This module does not implement the check_updates_since callback: ' . $instance['contextlevel'],
+                    );
+                    continue;
+                }
+
+                $content = $supportedplugins['mod_' . $cm->modname];
+
+                if (is_array($content)) {
+                    $instances[] = array(
+                        'contextlevel' => $instance['contextlevel'],
+                        'id' => $instance['id'],
+                        'updates' => course_check_module_updates_since($cm, $instance['since'], $content, $filter)
+                    );
+                } else {
+                    $instances[] = array(
+                        'contextlevel' => $instance['contextlevel'],
+                        'id' => $instance['id'],
+                        'updates' => call_user_func($cm->modname . '_check_updates_since', $cm, $instance['since'], $filter)
+                    );
+                }
+
+            } else {
+                $warnings[] = array(
+                    'item' => 'contextlevel',
+                    'itemid' => $instance['id'],
+                    'warningcode' => 'contextlevelnotsupported',
+                    'message' => 'Context level not yet supported ' . $instance['contextlevel'],
+                );
+            }
+        }
+        return array($instances, $warnings);
+    }
+}
+
+
+if (!function_exists('course_check_module_updates_since')) {
+    /**
+     * Check module updates since a given time.
+     * This function checks for updates in the module config, file areas, completion, grades, comments and ratings.
+     *
+     * @param  cm_info $cm        course module data
+     * @param  int $from          the time to check
+     * @param  array $fileareas   additional file ares to check
+     * @param  array $filter      if we need to filter and return only selected updates
+     * @return stdClass object with the different updates
+     * @since  Moodle 3.2
+     */
+    function course_check_module_updates_since($cm, $from, $fileareas = array(), $filter = array()) {
+        global $DB, $CFG, $USER;
+
+        $context = $cm->context;
+        $mod = $DB->get_record($cm->modname, array('id' => $cm->instance), '*', MUST_EXIST);
+
+        $updates = new stdClass();
+        $course = get_course($cm->course);
+        $component = 'mod_' . $cm->modname;
+
+        // Check changes in the module configuration.
+        if (isset($mod->timemodified) and (empty($filter) or in_array('configuration', $filter))) {
+            $updates->configuration = (object) array('updated' => false);
+            if ($updates->configuration->updated = $mod->timemodified > $from) {
+                $updates->configuration->timeupdated = $mod->timemodified;
+            }
+        }
+
+        // Check for updates in files.
+        if (plugin_supports('mod', $cm->modname, FEATURE_MOD_INTRO)) {
+            $fileareas[] = 'intro';
+        }
+        if (!empty($fileareas) and (empty($filter) or in_array('fileareas', $filter))) {
+            $fs = get_file_storage();
+            $files = local_mobile_fs_get_area_files($context->id, $component, $fileareas, false, "filearea, timemodified DESC", true, $from);
+            foreach ($fileareas as $filearea) {
+                $updates->{$filearea . 'files'} = (object) array('updated' => false);
+            }
+            foreach ($files as $file) {
+                $updates->{$file->get_filearea() . 'files'}->updated = true;
+                $updates->{$file->get_filearea() . 'files'}->itemids[] = $file->get_id();
+            }
+        }
+
+        // Check completion.
+        $supportcompletion = plugin_supports('mod', $cm->modname, FEATURE_COMPLETION_HAS_RULES);
+        $supportcompletion = $supportcompletion or plugin_supports('mod', $cm->modname, FEATURE_COMPLETION_TRACKS_VIEWS);
+        if ($supportcompletion and (empty($filter) or in_array('completion', $filter))) {
+            $updates->completion = (object) array('updated' => false);
+            $completion = new completion_info($course);
+            // Use wholecourse to cache all the modules the first time.
+            $completiondata = $completion->get_data($cm, true);
+            if ($updates->completion->updated = !empty($completiondata->timemodified) && $completiondata->timemodified > $from) {
+                $updates->completion->timemodified = $completiondata->timemodified;
+            }
+        }
+
+        // Check grades.
+        $supportgrades = plugin_supports('mod', $cm->modname, FEATURE_GRADE_HAS_GRADE);
+        $supportgrades = $supportgrades or plugin_supports('mod', $cm->modname, FEATURE_GRADE_OUTCOMES);
+        if ($supportgrades and (empty($filter) or (in_array('gradeitems', $filter) or in_array('outcomes', $filter)))) {
+            require_once($CFG->libdir . '/gradelib.php');
+            $grades = grade_get_grades($course->id, 'mod', $cm->modname, $mod->id, $USER->id);
+
+            if (empty($filter) or in_array('gradeitems', $filter)) {
+                $updates->gradeitems = (object) array('updated' => false);
+                foreach ($grades->items as $gradeitem) {
+                    foreach ($gradeitem->grades as $grade) {
+                        if ($grade->datesubmitted > $from or $grade->dategraded > $from) {
+                            $updates->gradeitems->updated = true;
+                            $updates->gradeitems->itemids[] = $gradeitem->id;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $updates;
+    }
+}
+
+
+/**
+ * Returns all area files (optionally limited by itemid)
+ *
+ * @param int $contextid context ID
+ * @param string $component component
+ * @param mixed $filearea file area/s, you cannot specify multiple fileareas as well as an itemid
+ * @param int $itemid item ID or all files if not specified
+ * @param string $sort A fragment of SQL to use for sorting
+ * @param bool $includedirs whether or not include directories
+ * @param int $updatedsince return files updated since this time
+ * @return stored_file[] array of stored_files indexed by pathanmehash
+ */
+function local_mobile_fs_get_area_files($contextid, $component, $filearea, $itemid = false, $sort = "itemid, filepath, filename",
+                                $includedirs = true, $updatedsince = 0) {
+    global $DB;
+
+    $fs = get_file_storage();
+    list($areasql, $conditions) = $DB->get_in_or_equal($filearea, SQL_PARAMS_NAMED);
+    $conditions['contextid'] = $contextid;
+    $conditions['component'] = $component;
+
+    if ($itemid !== false && is_array($filearea)) {
+        throw new coding_exception('You cannot specify multiple fileareas as well as an itemid.');
+    } else if ($itemid !== false) {
+        $itemidsql = ' AND f.itemid = :itemid ';
+        $conditions['itemid'] = $itemid;
+    } else {
+        $itemidsql = '';
+    }
+
+    $updatedsincesql = '';
+    if (!empty($updatedsince)) {
+        $conditions['time'] = $updatedsince;
+        $updatedsincesql = 'AND f.timemodified > :time';
+    }
+
+    $sql = "SELECT ".self::instance_sql_fields('f', 'r')."
+              FROM {files} f
+         LEFT JOIN {files_reference} r
+                   ON f.referencefileid = r.id
+             WHERE f.contextid = :contextid
+                   AND f.component = :component
+                   AND f.filearea $areasql
+                   $updatedsincesql
+                   $itemidsql";
+    if (!empty($sort)) {
+        $sql .= " ORDER BY {$sort}";
+    }
+
+    $result = array();
+    $filerecords = $DB->get_records_sql($sql, $conditions);
+    foreach ($filerecords as $filerecord) {
+        if (!$includedirs and $filerecord->filename === '.') {
+            continue;
+        }
+        $result[$filerecord->pathnamehash] = $fs->get_file_instance($filerecord);
+    }
+    return $result;
+}
+
+
+require_once("$CFG->dirroot/mod/assign/lib.php");
+if (function_exists('assign_check_updates_since')) {
+
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function assign_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB, $USER, $CFG;
+        require_once($CFG->dirroot . '/mod/assign/locallib.php');
+
+        $updates = new stdClass();
+        $updates = course_check_module_updates_since($cm, $from, array(ASSIGN_INTROATTACHMENT_FILEAREA), $filter);
+
+        // Check if there is a new submission by the user or new grades.
+        $select = 'assignment = :id AND userid = :userid AND (timecreated > :since1 OR timemodified > :since2)';
+        $params = array('id' => $cm->instance, 'userid' => $USER->id, 'since1' => $from, 'since2' => $from);
+        $updates->submissions = (object) array('updated' => false);
+        $submissions = $DB->get_records_select('assign_submission', $select, $params, '', 'id');
+        if (!empty($submissions)) {
+            $updates->submissions->updated = true;
+            $updates->submissions->itemids = array_keys($submissions);
+        }
+
+        $updates->grades = (object) array('updated' => false);
+        $grades = $DB->get_records_select('assign_grades', $select, $params, '', 'id');
+        if (!empty($grades)) {
+            $updates->grades->updated = true;
+            $updates->grades->itemids = array_keys($grades);
+        }
+
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/book/lib.php");
+if (function_exists('book_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function book_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB;
+
+        $context = $cm->context;
+        $updates = new stdClass();
+        if (!has_capability('mod/book:read', $context)) {
+            return $updates;
+        }
+        $updates = course_check_module_updates_since($cm, $from, array('content'), $filter);
+
+        $select = 'bookid = :id AND (timecreated > :since1 OR timemodified > :since2)';
+        $params = array('id' => $cm->instance, 'since1' => $from, 'since2' => $from);
+        if (!has_capability('mod/book:viewhiddenchapters', $context)) {
+            $select .= ' AND hidden = 0';
+        }
+        $updates->entries = (object) array('updated' => false);
+        $entries = $DB->get_records_select('book_chapters', $select, $params, '', 'id');
+        if (!empty($entries)) {
+            $updates->entries->updated = true;
+            $updates->entries->itemids = array_keys($entries);
+        }
+
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/choice/lib.php");
+if (function_exists('choice_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function choice_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB;
+
+        $updates = new stdClass();
+        $choice = $DB->get_record($cm->modname, array('id' => $cm->instance), '*', MUST_EXIST);
+        list($available, $warnings) = choice_get_availability_status($choice);
+        if (!$available) {
+            return $updates;
+        }
+
+        $updates = course_check_module_updates_since($cm, $from, array(), $filter);
+
+        if (!choice_can_view_results($choice)) {
+            return $updates;
+        }
+        // Check if there are new responses in the choice.
+        $updates->answers = (object) array('updated' => false);
+        $select = 'choiceid = :id AND timemodified > :since';
+        $params = array('id' => $choice->id, 'since' => $from);
+        $answers = $DB->get_records_select('choice_answers', $select, $params, '', 'id');
+        if (!empty($answers)) {
+            $updates->answers->updated = true;
+            $updates->answers->itemids = array_keys($answers);
+        }
+
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/glossary/lib.php");
+if (function_exists('glossary_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function glossary_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB;
+
+        $updates = course_check_module_updates_since($cm, $from, array('attachment', 'entry'), $filter);
+
+        $updates->entries = (object) array('updated' => false);
+        $select = 'glossaryid = :id AND (timecreated > :since1 OR timemodified > :since2)';
+        $params = array('id' => $cm->instance, 'since1' => $from, 'since2' => $from);
+        if (!has_capability('mod/glossary:approve', $cm->context)) {
+            $select .= ' AND approved = 1';
+        }
+
+        $entries = $DB->get_records_select('glossary_entries', $select, $params, '', 'id');
+        if (!empty($entries)) {
+            $updates->entries->updated = true;
+            $updates->entries->itemids = array_keys($entries);
+        }
+
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/lti/lib.php");
+if (function_exists('lti_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function lti_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB, $USER;
+
+        $updates = course_check_module_updates_since($cm, $from, array(), $filter);
+
+        // Check if there is a new submission.
+        $updates->submissions = (object) array('updated' => false);
+        $select = 'ltiid = :id AND userid = :userid AND (datesubmitted > :since1 OR dateupdated > :since2)';
+        $params = array('id' => $cm->instance, 'userid' => $USER->id, 'since1' => $from, 'since2' => $from);
+        $submissions = $DB->get_records_select('lti_submission', $select, $params, '', 'id');
+        if (!empty($submissions)) {
+            $updates->submissions->updated = true;
+            $updates->submissions->itemids = array_keys($submissions);
+        }
+
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/quiz/lib.php");
+if (function_exists('quiz_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function quiz_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB, $USER, $CFG;
+        require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+
+        $updates = course_check_module_updates_since($cm, $from, array(), $filter);
+
+        // Check if questions were updated.
+        $updates->questions = (object) array('updated' => false);
+        $quizobj = quiz::create($cm->instance, $USER->id);
+        $quizobj->preload_questions();
+        $quizobj->load_questions();
+        $questionids = array_keys($quizobj->get_questions());
+        if (!empty($questionids)) {
+            list($questionsql, $params) = $DB->get_in_or_equal($questionids, SQL_PARAMS_NAMED);
+            $select = 'id ' . $questionsql . ' AND (timemodified > :time1 OR timecreated > :time2)';
+            $params['time1'] = $from;
+            $params['time2'] = $from;
+            $questions = $DB->get_records_select('question', $select, $params, '', 'id');
+            if (!empty($questions)) {
+                $updates->questions->updated = true;
+                $updates->questions->itemids = array_keys($questions);
+            }
+        }
+
+        // Check for new attempts or grades.
+        $updates->attempts = (object) array('updated' => false);
+        $updates->grades = (object) array('updated' => false);
+        $select = 'quiz = ? AND userid = ? AND timemodified > ?';
+        $params = array($cm->instance, $USER->id, $from);
+
+        $attempts = $DB->get_records_select('quiz_attempts', $select, $params, '', 'id');
+        if (!empty($attempts)) {
+            $updates->attempts->updated = true;
+            $updates->attempts->itemids = array_keys($attempts);
+        }
+        $grades = $DB->get_records_select('quiz_grades', $select, $params, '', 'id');
+        if (!empty($grades)) {
+            $updates->grades->updated = true;
+            $updates->grades->itemids = array_keys($grades);
+        }
+
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/scorm/lib.php");
+if (function_exists('scorm_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function scorm_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB, $USER, $CFG;
+        require_once($CFG->dirroot . '/mod/scorm/locallib.php');
+
+        $scorm = $DB->get_record($cm->modname, array('id' => $cm->instance), '*', MUST_EXIST);
+        $updates = new stdClass();
+        list($available, $warnings) = scorm_get_availability_status($scorm, true, $cm->context);
+        if (!$available) {
+            return $updates;
+        }
+        $updates = course_check_module_updates_since($cm, $from, array('package'), $filter);
+
+        $updates->tracks = (object) array('updated' => false);
+        $select = 'scormid = ? AND userid = ? AND timemodified > ?';
+        $params = array($scorm->id, $USER->id, $from);
+        $tracks = $DB->get_records_select('scorm_scoes_track', $select, $params, '', 'id');
+        if (!empty($tracks)) {
+            $updates->tracks->updated = true;
+            $updates->tracks->itemids = array_keys($tracks);
+        }
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/survey/lib.php");
+if (function_exists('survey_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function survey_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB, $USER;
+
+        $updates = new stdClass();
+        if (!has_capability('mod/survey:participate', $cm->context)) {
+            return $updates;
+        }
+        $updates = course_check_module_updates_since($cm, $from, array(), $filter);
+
+        $updates->answers = (object) array('updated' => false);
+        $select = 'survey = ? AND userid = ? AND time > ?';
+        $params = array($cm->instance, $USER->id, $from);
+        $answers = $DB->get_records_select('survey_answers', $select, $params, '', 'id');
+        if (!empty($answers)) {
+            $updates->answers->updated = true;
+            $updates->answers->itemids = array_keys($answers);
+        }
+        return $updates;
+    }
+}
+
+require_once("$CFG->dirroot/mod/wiki/lib.php");
+if (function_exists('wiki_check_updates_since')) {
+    /**
+     * Check if the module has any update that affects the current user since a given time.
+     *
+     * @param  cm_info $cm course module data
+     * @param  int $from the time to check updates from
+     * @param  array $filter  if we need to check only specific updates
+     * @return stdClass an object with the different type of areas indicating if they were updated or not
+     * @since Moodle 3.2
+     */
+    function wiki_check_updates_since(cm_info $cm, $from, $filter = array()) {
+        global $DB, $CFG;
+        require_once($CFG->dirroot . '/mod/wiki/locallib.php');
+
+        $updates = new stdClass();
+        if (!has_capability('mod/wiki:viewpage', $cm->context)) {
+            return $updates;
+        }
+        $updates = course_check_module_updates_since($cm, $from, array('attachments'), $filter);
+
+        // Check only pages updated in subwikis the user can access.
+        $updates->pages = (object) array('updated' => false);
+        $wiki = $DB->get_record($cm->modname, array('id' => $cm->instance), '*', MUST_EXIST);
+        if ($subwikis = wiki_get_visible_subwikis($wiki, $cm, $cm->context)) {
+            $subwikisids = array();
+            foreach ($subwikis as $subwiki) {
+                $subwikisids[] = $subwiki->id;
+            }
+            list($subwikissql, $params) = $DB->get_in_or_equal($subwikisids, SQL_PARAMS_NAMED);
+            $select = 'subwikiid ' . $subwikissql . ' AND (timemodified > :since1 OR timecreated > :since2)';
+            $params['since1'] = $from;
+            $params['since2'] = $from;
+            $pages = $DB->get_records_select('wiki_pages', $select, $params, '', 'id');
+            if (!empty($pages)) {
+                $updates->pages->updated = true;
+                $updates->pages->itemids = array_keys($pages);
+            }
+        }
+        return $updates;
+    }
+}
