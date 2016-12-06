@@ -973,14 +973,6 @@ $functions = array(
                             user.',
             'type' => 'read',
       ),
-      'local_mobile_core_user_update_picture' => array(
-            'classname' => 'local_mobile_external',
-            'methodname' => 'core_user_update_picture',
-            'classpath' => 'local/mobile/externallib.php',
-            'description' => 'Update or delete the user picture in the site',
-            'type' => 'write',
-            'capabilities' => 'moodle/user:editownprofile, moodle/user:editprofile',
-      ),
       'local_mobile_tool_mobile_get_config' => array(
             'classname'   => 'local_mobile_external',
             'methodname'  => 'tool_mobile_get_config',
@@ -988,12 +980,13 @@ $functions = array(
             'description' => 'Returns a list of the site configurations, filtering by section.',
             'type'        => 'read',
       ),
-      'local_mobile_core_course_check_updates' => array(
+      'local_mobile_core_badges_get_user_badges' => array(
             'classname' => 'local_mobile_external',
-            'methodname' => 'core_course_check_updates',
+            'methodname' => 'core_badges_get_user_badges',
             'classpath' => 'local/mobile/externallib.php',
-            'description' => 'Check if there is updates affecting the user for the given course and contexts.',
+            'description' => 'Returns the list of badges awarded to a user.',
             'type' => 'read',
+            'capabilities'  => 'moodle/badges:viewotherbadges',
       ),
 );
 
@@ -1065,10 +1058,9 @@ $services = array(
             'local_mobile_mod_folder_view_folder',
             'local_mobile_core_course_get_user_navigation_options',
             'local_mobile_core_course_get_user_administration_options',
-            'local_mobile_core_user_update_picture',
             'local_mobile_mod_assign_view_assign',
             'local_mobile_tool_mobile_get_config',
-            'local_mobile_core_course_check_updates',
+            'local_mobile_core_badges_get_user_badges',
             'local_mobile_mod_chat_login_user',
             'local_mobile_mod_chat_get_chat_users',
             'local_mobile_mod_chat_send_chat_message',
