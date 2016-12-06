@@ -5541,104 +5541,6 @@ class local_mobile_external extends external_api {
     }
 
     /**
-     * Returns description of method parameters
-     *
-     * @return external_function_parameters
-     * @since Moodle 3.2
-     */
-    public static function core_user_update_picture_parameters() {
-        return new external_function_parameters(
-            array(
-                'draftitemid' => new external_value(PARAM_INT, 'Id of the user draft file to use as image'),
-                'delete' => new external_value(PARAM_BOOL, 'If we should delete the user picture', VALUE_DEFAULT, false),
-                'userid' => new external_value(PARAM_INT, 'Id of the user, 0 for current user', VALUE_DEFAULT, 0)
-            )
-        );
-    }
-
-    /**
-     * Update or delete the user picture in the site
-     *
-     * @param  int  $draftitemid id of the user draft file to use as image
-     * @param  bool $delete      if we should delete the user picture
-     * @param  int $userid       id of the user, 0 for current user
-     * @return array warnings and success status
-     * @since Moodle 3.2
-     * @throws moodle_exception
-     */
-    public static function core_user_update_picture($draftitemid, $delete = false, $userid = 0) {
-        global $CFG, $USER, $PAGE;
-
-        $params = self::validate_parameters(
-            self::core_user_update_picture_parameters(),
-            array(
-                'draftitemid' => $draftitemid,
-                'delete' => $delete,
-                'userid' => $userid
-            )
-        );
-
-        $context = context_system::instance();
-        self::validate_context($context);
-
-        if (!empty($CFG->disableuserimages)) {
-            throw new moodle_exception('userimagesdisabled', 'admin');
-        }
-
-        if (empty($params['userid']) or $params['userid'] == $USER->id) {
-            $user = $USER;
-            require_capability('moodle/user:editownprofile', $context);
-        } else {
-            $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
-            core_user::require_active_user($user);
-            $personalcontext = context_user::instance($user->id);
-
-            require_capability('moodle/user:editprofile', $personalcontext);
-            if (is_siteadmin($user) and !is_siteadmin($USER)) {  // Only admins may edit other admins.
-                throw new moodle_exception('useradmineditadmin');
-            }
-        }
-
-        // Load the appropriate auth plugin.
-        $userauth = get_auth_plugin($user->auth);
-        if (is_mnet_remote_user($user) or !$userauth->can_edit_profile() or $userauth->edit_profile_url()) {
-            throw new moodle_exception('noprofileedit', 'auth');
-        }
-
-        $filemanageroptions = array('maxbytes' => $CFG->maxbytes, 'subdirs' => 0, 'maxfiles' => 1, 'accepted_types' => 'web_image');
-        $user->deletepicture = $params['delete'];
-        $user->imagefile = $params['draftitemid'];
-        $success = local_mobile_core_user_update_picture($user, $filemanageroptions);
-
-        $result = array(
-            'success' => $success,
-            'warnings' => array(),
-        );
-        if ($success) {
-            $userpicture = new user_picture(core_user::get_user($user->id));
-            $userpicture->size = 1; // Size f1.
-            $result['profileimageurl'] = $userpicture->get_url($PAGE)->out(false);
-        }
-        return $result;
-    }
-
-    /**
-     * Returns description of method result value
-     *
-     * @return external_description
-     * @since Moodle 3.2
-     */
-    public static function core_user_update_picture_returns() {
-        return new external_single_structure(
-            array(
-                'success' => new external_value(PARAM_BOOL, 'True if the image was updated, false otherwise.'),
-                'profileimageurl' => new external_value(PARAM_URL, 'New profile user image url', VALUE_OPTIONAL),
-                'warnings' => new external_warnings()
-            )
-        );
-    }
-
-    /**
      * Returns description of get_config() parameters.
      *
      * @return external_function_parameters
@@ -5660,6 +5562,7 @@ class local_mobile_external extends external_api {
      * @since  Moodle 3.2
      */
     public static function tool_mobile_get_config($section = '') {
+        global $CFG, $SITE;
 
         $params = self::validate_parameters(self::tool_mobile_get_config_parameters(), array('section' => $section));
 
@@ -5734,129 +5637,152 @@ class local_mobile_external extends external_api {
     }
 
     /**
-     * Returns description of method parameters
+     * Describes the parameters for core_badges_get_user_badges.
      *
-     * @return external_function_parameters
-     * @since Moodle 3.2
+     * @return external_external_function_parameters
+     * @since Moodle 3.1
      */
-    public static function core_course_check_updates_parameters() {
-        return new external_function_parameters(
+    public static function core_badges_get_user_badges_parameters() {
+        return new external_function_parameters (
             array(
-                'courseid' => new external_value(PARAM_INT, 'Course id to check'),
-                'tocheck' => new external_multiple_structure(
-                    new external_single_structure(
-                        array(
-                            'contextlevel' => new external_value(PARAM_ALPHA, 'The context level for the file location.
-                                                                                Only module supported right now.'),
-                            'id' => new external_value(PARAM_INT, 'Context instance id'),
-                            'since' => new external_value(PARAM_INT, 'Check updates since this time stamp'),
-                        )
-                    ),
-                    'Instances to check'
-                ),
-                'filter' => new external_multiple_structure(
-                    new external_value(PARAM_ALPHANUM, 'Area name: configuration, fileareas, completion, ratings, comments,
-                                                        gradeitems, outcomes'),
-                    'Check only for updates in these areas', VALUE_DEFAULT, array()
-                )
+                'userid' => new external_value(PARAM_INT, 'Badges only for this user id, empty for current user', VALUE_DEFAULT, 0),
+                'courseid' => new external_value(PARAM_INT, 'Filter badges by course id, empty all the courses', VALUE_DEFAULT, 0),
+                'page' => new external_value(PARAM_INT, 'The page of records to return.', VALUE_DEFAULT, 0),
+                'perpage' => new external_value(PARAM_INT, 'The number of records to return per page', VALUE_DEFAULT, 0),
+                'search' => new external_value(PARAM_RAW, 'A simple string to search for', VALUE_DEFAULT, ''),
+                'onlypublic' => new external_value(PARAM_BOOL, 'Whether to return only public badges', VALUE_DEFAULT, false),
             )
         );
     }
 
     /**
-     * Check if there is updates affecting the user for the given course and contexts.
-     * Right now only modules are supported.
-     * This WS calls mod_core_course_check_updates_since for each module to check if there is any update the user should we aware of.
+     * Returns the list of badges awarded to a user.
      *
-     * @param int $courseid the list of modules to check
-     * @param array $tocheck the list of modules to check
-     * @param array $filter check only for updates in these areas
-     * @return array list of updates and warnings
+     * @param int $userid       user id
+     * @param int $courseid     course id
+     * @param int $page         page of records to return
+     * @param int $perpage      number of records to return per page
+     * @param string  $search   a simple string to search for
+     * @param bool $onlypublic  whether to return only public badges
+     * @return array array containing warnings and the awarded badges
+     * @since  Moodle 3.1
      * @throws moodle_exception
-     * @since Moodle 3.2
      */
-    public static function core_course_check_updates($courseid, $tocheck, $filter = array()) {
-        global $CFG, $DB;
+    public static function core_badges_get_user_badges($userid = 0, $courseid = 0, $page = 0, $perpage = 0, $search = '', $onlypublic = false) {
+        global $CFG, $USER;
+        require_once($CFG->libdir . '/badgeslib.php');
 
-        $params = self::validate_parameters(
-            self::core_course_check_updates_parameters(),
-            array(
-                'courseid' => $courseid,
-                'tocheck' => $tocheck,
-                'filter' => $filter,
-            )
+        $warnings = array();
+
+        $params = array(
+            'userid' => $userid,
+            'courseid' => $courseid,
+            'page' => $page,
+            'perpage' => $perpage,
+            'search' => $search,
+            'onlypublic' => $onlypublic,
         );
+        $params = self::validate_parameters(self::core_badges_get_user_badges_parameters(), $params);
 
-        $course = get_course($params['courseid']);
-        $context = context_course::instance($course->id);
-        self::validate_context($context);
+        if (empty($CFG->enablebadges)) {
+            throw new moodle_exception('badgesdisabled', 'badges');
+        }
 
-        list($instances, $warnings) = course_check_updates($course, $params['tocheck'], $filter);
+        if (empty($CFG->badges_allowcoursebadges) && $params['courseid'] != 0) {
+            throw new moodle_exception('coursebadgesdisabled', 'badges');
+        }
 
-        $instancesformatted = array();
-        foreach ($instances as $instance) {
-            $updates = array();
-            foreach ($instance['updates'] as $name => $data) {
-                if (empty($data->updated)) {
-                    continue;
-                }
-                $updatedata = array(
-                    'name' => $name,
-                );
-                if (!empty($data->timeupdated)) {
-                    $updatedata['timeupdated'] = $data->timeupdated;
-                }
-                if (!empty($data->itemids)) {
-                    $updatedata['itemids'] = $data->itemids;
-                }
-                $updates[] = $updatedata;
-            }
-            if (!empty($updates)) {
-                $instancesformatted[] = array(
-                    'contextlevel' => $instance['contextlevel'],
-                    'id' => $instance['id'],
-                    'updates' => $updates
+        // Default value for userid.
+        if (empty($params['userid'])) {
+            $params['userid'] = $USER->id;
+        }
+
+        // Validate the user.
+        $user = core_user::get_user($params['userid'], '*', MUST_EXIST);
+        core_user::require_active_user($user);
+
+        $usercontext = context_user::instance($user->id);
+        self::validate_context($usercontext);
+
+        if ($USER->id != $user->id) {
+            require_capability('moodle/badges:viewotherbadges', $usercontext);
+            // We are looking other user's badges, we must retrieve only public badges.
+            $params['onlypublic'] = true;
+        }
+
+        $userbadges = badges_get_user_badges($user->id, $params['courseid'], $params['page'], $params['perpage'], $params['search'],
+                                                $params['onlypublic']);
+
+        $result = array();
+        $result['badges'] = array();
+        $result['warnings'] = $warnings;
+
+        foreach ($userbadges as $badge) {
+            $context = ($badge->type == BADGE_TYPE_SITE) ? context_system::instance() : context_course::instance($badge->courseid);
+            $badge->badgeurl = moodle_url::make_webservice_pluginfile_url($context->id, 'badges', 'badgeimage', $badge->id, '/',
+                                                                            'f1')->out(false);
+            // Return all the information if we are requesting our own badges.
+            // Or, if we have permissions for configuring badges in the badge context.
+            if ($USER->id == $user->id or has_capability('moodle/badges:configuredetails', $context)) {
+                $result['badges'][] = (array) $badge;
+            } else {
+                $result['badges'][] = array(
+                    'name' => $badge->name,
+                    'description' => $badge->description,
+                    'badgeurl' => $badge->badgeurl,
+                    'issuername' => $badge->issuername,
+                    'issuerurl' => $badge->issuerurl,
+                    'issuercontact' => $badge->issuercontact,
+                    'uniquehash' => $badge->uniquehash,
+                    'dateissued' => $badge->dateissued,
+                    'dateexpire' => $badge->dateexpire,
                 );
             }
         }
 
-        return array(
-            'instances' => $instancesformatted,
-            'warnings' => $warnings
-        );
+        return $result;
     }
 
     /**
-     * Returns description of method result value
+     * Describes the core_badges_get_user_badges return value.
      *
-     * @return external_description
-     * @since Moodle 3.2
+     * @return external_single_structure
+     * @since Moodle 3.1
      */
-    public static function core_course_check_updates_returns() {
+    public static function core_badges_get_user_badges_returns() {
         return new external_single_structure(
             array(
-                'instances' => new external_multiple_structure(
+                'badges' => new external_multiple_structure(
                     new external_single_structure(
                         array(
-                            'contextlevel' => new external_value(PARAM_ALPHA, 'The context level'),
-                            'id' => new external_value(PARAM_INT, 'Instance id'),
-                            'updates' => new external_multiple_structure(
-                                new external_single_structure(
-                                    array(
-                                        'name' => new external_value(PARAM_ALPHANUMEXT, 'Name of the area updated.'),
-                                        'timeupdated' => new external_value(PARAM_INT, 'Last time was updated', VALUE_OPTIONAL),
-                                        'itemids' => new external_multiple_structure(
-                                            new external_value(PARAM_INT, 'Instance id'),
-                                            'The ids of the items updated',
-                                            VALUE_OPTIONAL
-                                        )
-                                    )
-                                )
-                            )
+                            'id' => new external_value(PARAM_INT, 'Badge id.', VALUE_OPTIONAL),
+                            'name' => new external_value(PARAM_FILE, 'Badge name.'),
+                            'description' => new external_value(PARAM_NOTAGS, 'Badge description.'),
+                            'badgeurl' => new external_value(PARAM_URL, 'Badge URL.'),
+                            'timecreated' => new external_value(PARAM_INT, 'Time created.', VALUE_OPTIONAL),
+                            'timemodified' => new external_value(PARAM_INT, 'Time modified.', VALUE_OPTIONAL),
+                            'usercreated' => new external_value(PARAM_INT, 'User created.', VALUE_OPTIONAL),
+                            'usermodified' => new external_value(PARAM_INT, 'User modified.', VALUE_OPTIONAL),
+                            'issuername' => new external_value(PARAM_NOTAGS, 'Issuer name.'),
+                            'issuerurl' => new external_value(PARAM_URL, 'Issuer URL.'),
+                            'issuercontact' => new external_value(PARAM_RAW, 'Issuer contact.'),
+                            'expiredate' => new external_value(PARAM_INT, 'Expire date.', VALUE_OPTIONAL),
+                            'expireperiod' => new external_value(PARAM_INT, 'Expire period.', VALUE_OPTIONAL),
+                            'type' => new external_value(PARAM_INT, 'Type.', VALUE_OPTIONAL),
+                            'courseid' => new external_value(PARAM_INT, 'Course id.', VALUE_OPTIONAL),
+                            'message' => new external_value(PARAM_RAW, 'Message.', VALUE_OPTIONAL),
+                            'messagesubject' => new external_value(PARAM_TEXT, 'Message subject.', VALUE_OPTIONAL),
+                            'attachment' => new external_value(PARAM_INT, 'Attachment.', VALUE_OPTIONAL),
+                            'status' => new external_value(PARAM_INT, 'Status.', VALUE_OPTIONAL),
+                            'issuedid' => new external_value(PARAM_INT, 'Issued id.', VALUE_OPTIONAL),
+                            'uniquehash' => new external_value(PARAM_ALPHANUM, 'Unique hash.'),
+                            'dateissued' => new external_value(PARAM_INT, 'Date issued.'),
+                            'dateexpire' => new external_value(PARAM_INT, 'Date expire.'),
+                            'visible' => new external_value(PARAM_INT, 'Visible.', VALUE_OPTIONAL),
                         )
                     )
                 ),
-                'warnings' => new external_warnings()
+                'warnings' => new external_warnings(),
             )
         );
     }
