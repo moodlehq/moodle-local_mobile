@@ -71,4 +71,6 @@ $string['forcelogout_desc'] = 'If enabled, the app option \'Change site\' is rep
 
 $string['mainmenu'] = 'Main menu';
 $string['mobilefeatures'] = 'Mobile features';
+$string['notifications'] = 'Notifications';
+$string['privatefiles'] = 'Private files';
 $string['remoteaddons'] = 'Remote add-ons';
