@@ -5601,6 +5601,13 @@ class local_mobile_external extends external_api {
             $settings->mygradesurl = user_mygrades_url()->out(false);
         }
 
+        if (empty($section) or $section == 'mobileapp') {
+            $settings->tool_mobile_forcelogout = get_config('local_mobile', 'forcelogout');
+            $settings->tool_mobile_customlangstrings = get_config('local_mobile', 'customlangstrings');
+            $settings->tool_mobile_disabledfeatures = get_config('local_mobile', 'disabledfeatures');
+            $settings->tool_mobile_custommenuitems = get_config('local_mobile', 'custommenuitems');
+        }
+
         $result['settings'] = array();
         foreach ($settings as $name => $value) {
             $result['settings'][] = array(
@@ -5787,3 +5794,4 @@ class local_mobile_external extends external_api {
         );
     }
 }
+

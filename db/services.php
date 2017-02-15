@@ -568,8 +568,6 @@ $services = array(
             'local_mobile_core_course_get_user_navigation_options',
             'local_mobile_core_course_get_user_administration_options',
             'local_mobile_mod_assign_view_assign',
-            'local_mobile_tool_mobile_get_config',
-            'local_mobile_core_badges_get_user_badges',
             'mod_resource_view_resource',
             'mod_scorm_get_scorm_attempt_count',
             'mod_scorm_get_scorm_sco_tracks',
@@ -632,6 +630,8 @@ $services = array(
             'local_mobile_mod_assign_save_submission',
             'local_mobile_mod_assign_get_submission_status',
             'local_mobile_mod_assign_view_submission_status',
+            'local_mobile_tool_mobile_get_config',
+
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
