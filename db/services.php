@@ -859,6 +859,13 @@ $functions = array(
             'type' => 'read',
             'capabilities'  => 'moodle/badges:viewotherbadges',
       ),
+    'local_mobile_core_course_get_courses_by_field' => array(
+        'classname' => 'local_mobile_external',
+        'methodname' => 'core_course_get_courses_by_field',
+        'classpath' => 'local/mobile/externallib.php',
+        'description' => 'Get courses matching a specific field (id/s, shortname, idnumber, category)',
+        'type' => 'read',
+    ),
 );
 
 $services = array(
@@ -1010,6 +1017,9 @@ $services = array(
             'local_mobile_mod_assign_view_submission_status',
             'local_mobile_mod_assign_view_grading_table',
             'local_mobile_tool_mobile_get_config',
+            'local_mobile_core_badges_get_user_badges',
+            'local_mobile_core_course_get_courses_by_field',
+            'core_course_get_categories',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
