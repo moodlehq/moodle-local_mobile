@@ -12281,6 +12281,7 @@ class local_mobile_external extends external_api {
         $coursereturns['overviewfiles']     = $files;
         $coursereturns['contacts']          = $coursecontacts;
         $coursereturns['enrollmentmethods'] = $enroltypes;
+        $coursereturns['sortorder'] = $course->sortorder;
         return $coursereturns;
     }
 
