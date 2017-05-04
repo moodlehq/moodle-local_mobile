@@ -32,13 +32,6 @@ $functions = array(
         'description' => 'Retrieve the plugin settings.',
         'type'        => 'read',
     ),
-    'local_mobile_tool_mobile_get_config' => array(
-        'classname'   => 'local_mobile_external',
-        'methodname'  => 'tool_mobile_get_config',
-        'classpath'   => 'local/mobile/externallib.php',
-        'description' => 'Retrieve mobile specific settings.',
-        'type'        => 'read',
-    ),
 );
 
 $services = array(
@@ -244,7 +237,6 @@ $services = array(
             'mod_wiki_view_page',
             'mod_wiki_view_wiki',
             'local_mobile_get_plugin_settings',
-            'local_mobile_tool_mobile_get_config',
             'tool_lp_data_for_course_competencies_page',
             'tool_lp_data_for_plans_page',
             'tool_lp_data_for_plan_page',
@@ -254,6 +246,7 @@ $services = array(
             'tool_lp_data_for_user_evidence_list_page',
             'tool_lp_data_for_user_evidence_page',
             'tool_mobile_get_autologin_key',
+            'tool_mobile_get_config',
             'tool_mobile_get_plugins_supporting_mobile',
             'tool_mobile_get_public_config',
         ),
