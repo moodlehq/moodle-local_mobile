@@ -39,6 +39,20 @@ $functions = array(
         'description' => 'Retrieve mobile specific settings.',
         'type'        => 'read',
     ),
+    'local_mobile_tool_mobile_get_plugins_supporting_mobile' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'tool_mobile_get_plugins_supporting_mobile',
+        'classpath' => 'local/mobile/externallib.php',
+        'description' => 'Returns a list of Moodle plugins supporting the mobile app.',
+        'type'        => 'read',
+    ),
+    'local_mobile_tool_mobile_get_content' => array(
+        'classname'   => 'local_mobile_external',
+        'methodname'  => 'tool_mobile_get_content',
+        'classpath' => 'local/mobile/externallib.php',
+        'description' => 'Returns a piece of content to be displayed in the Mobile app.',
+        'type'        => 'read',
+    ),
 );
 
 $services = array(
@@ -254,8 +268,9 @@ $services = array(
             'tool_lp_data_for_user_evidence_list_page',
             'tool_lp_data_for_user_evidence_page',
             'tool_mobile_get_autologin_key',
-            'tool_mobile_get_plugins_supporting_mobile',
             'tool_mobile_get_public_config',
+            'local_mobile_tool_mobile_get_plugins_supporting_mobile',
+            'local_mobile_tool_mobile_get_content',
         ),
         'enabled' => 0,
         'restrictedusers' => 0,
